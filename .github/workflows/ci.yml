@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests (synthetic data only, no dataset needed)
+        run: bash tools/run_tests.sh
+      - name: Build API docs
+        run: bash tools/build_docs.sh
+      - name: Upload test report and docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            doc/test_report.html
+            doc/api/

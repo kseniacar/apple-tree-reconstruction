@@ -1,0 +1,33 @@
+# Data stays out of git (too large); keep only the README
+data/*
+!data/README.md
+
+# Model weights and run outputs
+*.pt
+*.pth
+*.ckpt
+outputs/
+runs/
+
+# Never commit passwords or GitHub tokens
+.env
+*.token
+secrets*
+
+# Zipped copies of the repo (e.g. the Moodle submission zip)
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

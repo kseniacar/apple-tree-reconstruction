@@ -1,0 +1,9 @@
+numpy
+scipy
+scikit-image
+pillow
+matplotlib
+pytest
+pytest-html
+pdoc
+tomli; python_version < "3.11"

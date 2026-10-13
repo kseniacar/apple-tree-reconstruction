@@ -1,0 +1,12 @@
+# Default settings. Override data_root on the command line or edit locally.
+
+data_root = "data/TreeID"
+season = "Summer"
+mask_size = 256            # ground-truth masks are 256 x 256
+exclude_rows = ["R04"]     # row 4 winter depth images are duplicates (see doc)
+
+[baseline]
+exg_threshold = 0.05       # excess-green above this is treated as leaf
+depth_min = 1              # 8-bit depth band kept as foreground tree
+depth_max = 255
+closing_radius = 3
