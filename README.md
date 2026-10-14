@@ -44,6 +44,21 @@ from google.colab import drive; drive.mount('/content/drive')
 !python src/main.py --data-root /content/drive/MyDrive/TreeID
 ```
 
+## Training the models
+
+The main method (`src/train.py`) uses regression models taught in the unit. Each pixel gets colour, depth, neighbourhood and position features, and a model predicts how likely it is to be branch. Models: linear regression, decision tree, support vector regression and neural network (MLP) regression.
+
+```bash
+python src/train.py --limit 40          # quick check
+python src/train.py                     # all models, settings in config/default.toml [ml]
+python src/train.py --work-size 64      # resolution sensitivity study
+python src/train.py --no-depth          # does depth help?
+```
+
+Images are split by tree into train / validation / test. The validation trees set each model's threshold; the test trees are only used for the final comparison with the baseline. Trained models go to `outputs/` (not committed); results, example images and decision-tree feature importance go to `res/`.
+
+Optional extension: `src/train_unet.py` trains a U-Net (needs `pip install -r requirements-train.txt`).
+
 ## Documentation
 
 - HTML API docs: `doc/api/index.html`, rebuilt with `bash tools/build_docs.sh` (pdoc)

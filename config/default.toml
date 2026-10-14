@@ -10,3 +10,27 @@ exg_threshold = 0.05       # excess-green above this is treated as leaf
 depth_min = 1              # 8-bit depth band kept as foreground tree
 depth_max = 255
 closing_radius = 3
+
+[ml]                       # per-pixel regression models (src/train.py)
+work_size = 128            # features and predictions at 128 x 128, upsampled to 256
+pixels_per_class = 500     # balanced branch / background pixels sampled per training image
+val_frac = 0.15            # fraction of trees used for validation (threshold choice)
+test_frac = 0.15           # fraction of trees held out for the final test
+seed = 0
+tree_max_depth = 12
+tree_min_samples_leaf = 20
+svr_c = 1.0
+svr_epsilon = 0.1
+svr_samples = 3000         # SVR is trained on a random subset (cost grows ~ n^2)
+mlp_hidden = [64, 32]
+mlp_max_iter = 200
+
+[unet]                     # optional extension (src/train_unet.py, needs PyTorch)
+image_size = 256           # network input size (same as the GT masks)
+base_channels = 16         # width of the first U-Net level; doubles each level
+epochs = 40
+batch_size = 8
+lr = 0.001
+val_frac = 0.15            # fraction of trees used for validation
+test_frac = 0.15           # fraction of trees held out for the final test
+seed = 0

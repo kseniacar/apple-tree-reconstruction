@@ -1,6 +1,7 @@
 numpy
 scipy
 scikit-image
+scikit-learn
 pillow
 matplotlib
 pytest
