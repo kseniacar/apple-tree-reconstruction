@@ -15,6 +15,11 @@ Usage:
     python src/train.py --models tree mlp        # only some models
     python src/train.py --work-size 64           # resolution sensitivity study
     python src/train.py --no-depth               # RGB only, to see whether depth helps
+    python src/train.py --no-position            # drop row/column features: do models use appearance?
+
+Besides the baseline, every run also reports "prior": the average training
+mask, thresholded, used as the prediction for every test image. A model that
+does not beat it has only learned where trees usually are, not what they look like.
 
 Outputs:
     outputs/<model>.joblib              trained models, not committed
@@ -68,7 +73,7 @@ def build_model(name, cfg, seed):
     return make_pipeline(StandardScaler(), reg)
 
 
-def load_images(pairs, work_size, use_depth):
+def load_images(pairs, work_size, use_depth, use_position=True):
     """Load samples as (features, mask at work size, mask at 256) per image."""
     out = []
     for i, p in enumerate(pairs, 1):
@@ -76,7 +81,7 @@ def load_images(pairs, work_size, use_depth):
         if not use_depth:
             x[3] = 0
         xs, ys = downsample(x, y > 0.5, work_size)
-        out.append({"x": x, "feats": pixel_features(xs), "y_small": ys, "y": y > 0.5})
+        out.append({"x": x, "feats": pixel_features(xs, position=use_position), "y_small": ys, "y": y > 0.5})
         if i % 100 == 0:
             print(f"  loaded {i}/{len(pairs)}", flush=True)
     return out
@@ -113,6 +118,7 @@ def main(argv=None):
     parser.add_argument("--models", nargs="+", default=ALL_MODELS, choices=ALL_MODELS)
     parser.add_argument("--work-size", type=int, default=None, help="working resolution in pixels")
     parser.add_argument("--no-depth", action="store_true", help="set the depth channel to zero")
+    parser.add_argument("--no-position", action="store_true", help="leave out the row/column features")
     parser.add_argument("--limit", type=int, default=None, help="use only the first N images (quick test)")
     parser.add_argument("--out", default="outputs", help="folder for trained models")
     parser.add_argument("--res", default="res", help="folder for results and figures")
@@ -137,7 +143,7 @@ def main(argv=None):
           f"{len(split['test'])} test (split by tree), working size {work}x{work}")
 
     print("Loading images and computing features...")
-    data = {k: load_images(v, work, not args.no_depth) for k, v in split.items()}
+    data = {k: load_images(v, work, not args.no_depth, not args.no_position) for k, v in split.items()}
     n_per_class = mcfg.get("pixels_per_class", 500)
     parts = [sample_pixels(img["feats"], img["y_small"], n_per_class, rng) for img in data["train"]]
     X = np.concatenate([p[0] for p in parts])
@@ -147,7 +153,7 @@ def main(argv=None):
     out_dir, res_dir = Path(args.out), Path(args.res)
     out_dir.mkdir(exist_ok=True)
     res_dir.mkdir(exist_ok=True)
-    tag = "_rgb" if args.no_depth else ""
+    tag = ("_rgb" if args.no_depth else "") + ("_nopos" if args.no_position else "")
     results, val_rows, test_masks = {}, [], {}
 
     # Baseline on the same test trees, for a like-for-like comparison.
@@ -164,6 +170,15 @@ def main(argv=None):
     results["baseline"] = mean_scores(base_rows)
     results["baseline"].update(fit_s=0.0, sec_per_image=(time.perf_counter() - t0) / len(base_rows))
     test_masks["baseline"] = base_masks
+
+    # Shape prior: the mean training mask, thresholded on validation, predicted for every test image.
+    mean_mask = np.mean([img["y"] for img in data["train"]], axis=0)
+    thr, val_dice = best_threshold([mean_mask] * len(data["val"]), [img["y"] for img in data["val"]])
+    val_rows.append({"model": "prior", "threshold": thr, "val_dice": val_dice})
+    prior = mean_mask > thr
+    results["prior"] = mean_scores([score(prior, img["y"]) for img in data["test"]])
+    results["prior"].update(fit_s=0.0, sec_per_image=0.0)
+    test_masks["prior"] = [prior] * len(data["test"])
 
     for name in args.models:
         model = build_model(name, mcfg, seed)
@@ -195,7 +210,7 @@ def main(argv=None):
             with open(res_dir / f"tree_feature_importance{tag}.csv", "w", newline="") as f:
                 w = csv.writer(f)
                 w.writerow(["feature", "importance"])
-                for fname, v in sorted(zip(feature_names(), imp), key=lambda z: -z[1]):
+                for fname, v in sorted(zip(feature_names(position=not args.no_position), imp), key=lambda z: -z[1]):
                     w.writerow([fname, f"{v:.4f}"])
 
     keys = list(results["baseline"])

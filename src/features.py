@@ -7,13 +7,13 @@ from skimage.transform import resize
 BASE_CHANNELS = ["r", "g", "b", "depth", "exg"]
 
 
-def feature_names(scales=(0, 2, 6)):
+def feature_names(scales=(0, 2, 6), position=True):
     """Names of the columns returned by ``pixel_features`` (same order)."""
     names = [f"{c}_s{s}" for s in scales for c in BASE_CHANNELS]
-    return names + ["row", "col"]
+    return names + (["row", "col"] if position else [])
 
 
-def pixel_features(x, scales=(0, 2, 6)):
+def pixel_features(x, scales=(0, 2, 6), position=True):
     """Build one feature vector per pixel.
 
     Each pixel gets its own R, G, B, depth and excess-green values, the same
@@ -24,9 +24,10 @@ def pixel_features(x, scales=(0, 2, 6)):
     Args:
         x: (4, H, W) float array in [0, 1], channels R, G, B, depth.
         scales: Gaussian sigmas in pixels; 0 means the raw value.
+        position: include the row/column features.
 
     Returns:
-        (H * W, F) float32 array, F = 5 * len(scales) + 2.
+        (H * W, F) float32 array, F = 5 * len(scales) (+ 2 with position).
     """
     r, g, b, d = x[:4]
     exg = (2 * g - r - b) / (r + g + b + 1e-6)
@@ -34,9 +35,10 @@ def pixel_features(x, scales=(0, 2, 6)):
     for sigma in scales:
         for ch in (r, g, b, d, exg):
             feats.append(ch if sigma == 0 else gaussian_filter(ch, sigma))
-    h, w = r.shape
-    rows, cols = np.mgrid[0:h, 0:w]
-    feats += [rows / (h - 1), cols / (w - 1)]
+    if position:
+        h, w = r.shape
+        rows, cols = np.mgrid[0:h, 0:w]
+        feats += [rows / (h - 1), cols / (w - 1)]
     return np.stack(feats, axis=-1).reshape(-1, len(feats)).astype(np.float32)
 
 

@@ -53,6 +53,7 @@ python src/train.py --limit 40          # quick check
 python src/train.py                     # all models, settings in config/default.toml [ml]
 python src/train.py --work-size 64      # resolution sensitivity study
 python src/train.py --no-depth          # does depth help?
+python src/train.py --no-position       # without row/column features: do models use appearance?
 ```
 
 Images are split by tree into train / validation / test. The validation trees set each model's threshold; the test trees are only used for the final comparison with the baseline. Trained models go to `outputs/` (not committed); results, example images and decision-tree feature importance go to `res/`.
