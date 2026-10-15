@@ -1,4 +1,15 @@
-"""Evaluation metrics comparing predicted and ground-truth branch masks."""
+"""Count pixel agreements between a predicted and a true mask.
+
+Args:
+    pred: boolean array, the predicted mask.
+    gt: boolean array of the same shape, the ground-truth mask.
+
+Returns:
+    (tp, fp, fn, tn): true/false positive and negative pixel counts.
+
+Raises:
+    ValueError: if pred and gt have different shapes.
+"""
 
 import numpy as np
 from scipy.ndimage import distance_transform_edt

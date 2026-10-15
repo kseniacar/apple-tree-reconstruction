@@ -1,32 +1,12 @@
-"""Train per-pixel regression models taught in MMA3001 and compare them with the baseline.
-
-Each pixel is described by colour, depth, smoothed (neighbourhood) versions of
-those, and its position (see features.py). A regression model maps these
-features to a branch value between 0 and 1, which is thresholded into a mask.
-Models (unit Week 5): linear regression, decision tree regression, support
-vector regression and neural network (MLP) regression.
-
-Prediction runs at a reduced working resolution and the result is upsampled
-to the 256 x 256 ground-truth grid by bilinear interpolation (Week 3).
-
-Usage:
-    python src/train.py                          # all models, settings from config/default.toml [ml]
-    python src/train.py --limit 40               # quick check that everything runs
-    python src/train.py --models tree mlp        # only some models
-    python src/train.py --work-size 64           # resolution sensitivity study
-    python src/train.py --no-depth               # RGB only, to see whether depth helps
-    python src/train.py --no-position            # drop row/column features: do models use appearance?
-
-Besides the baseline, every run also reports "prior": the average training
-mask, thresholded, used as the prediction for every test image. A model that
-does not beat it has only learned where trees usually are, not what they look like.
-
-Outputs:
-    outputs/<model>.joblib              trained models, not committed
-    res/ml_results.csv                  test-set metrics and timings, baseline vs each model
-    res/ml_validation.csv               threshold chosen for each model on the validation trees
-    res/ml_examples.png                 RGB / ground truth / baseline / each model on test images
-    res/tree_feature_importance.csv     which features the decision tree relies on
+"""Create an untrained scikit-learn regressor; inputs are standardised first.
+Args:
+    name: "linear", "tree", "svr" or "mlp".
+    cfg: the [ml] settings from config/default.toml.
+    seed: random seed for repeatable results.
+Returns:
+    A scikit-learn Pipeline (StandardScaler, then the model).
+Raises:
+    ValueError: if name is not one of the four models.
 """
 
 import argparse
