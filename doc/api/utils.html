@@ -39,10 +39,10 @@
                     <a class="function" href="#read_image">read_image</a>
             </li>
             <li>
-                    <a class="function" href="#read_mask">read_mask</a>
+                    <a class="function" href="#read_depth">read_depth</a>
             </li>
             <li>
-                    <a class="function" href="#find_samples">find_samples</a>
+                    <a class="function" href="#read_mask">read_mask</a>
             </li>
     </ul>
 
@@ -69,59 +69,82 @@ utils    </h1>
 
                         <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="sd">"""Small shared helpers: config loading and image I/O."""</span>
 </span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a>
-</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="k">try</span><span class="p">:</span>
-</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">tomllib</span>  <span class="c1"># Python 3.11+</span>
-</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="k">except</span> <span class="ne">ModuleNotFoundError</span><span class="p">:</span>  <span class="c1"># Python 3.10: same API from the tomli package</span>
-</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">tomli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tomllib</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a>
-</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="k">try</span><span class="p">:</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">tomllib</span>  <span class="c1"># Python 3.11+</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="k">except</span> <span class="ne">ModuleNotFoundError</span><span class="p">:</span>  <span class="c1"># Python 3.10: same API from the tomli package</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">tomli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tomllib</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a>
+</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a>
 </span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a>
-</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a>
-</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a><span class="w">    </span><span class="sd">"""Load a TOML config file.</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a>
-</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="sd">    Args:</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a><span class="sd">        path: Path to a ``.toml`` file.</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a>
-</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a><span class="sd">    Returns:</span>
-</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a><span class="sd">        dict of settings.</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="sd">    """</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a>        <span class="k">return</span> <span class="n">tomllib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a>
-</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a>
-</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a><span class="w">    </span><span class="sd">"""Read an image file into a numpy array (uint8)."""</span>
-</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
-</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a>
-</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a>
-</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_mask</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a><span class="w">    </span><span class="sd">"""Read a ground-truth mask and return it as a boolean array (white = branch)."""</span>
-</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a>    <span class="n">img</span> <span class="o">=</span> <span class="n">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a>    <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a>        <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
-</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a>    <span class="k">return</span> <span class="n">img</span> <span class="o">&gt;</span> <span class="mi">127</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="w">    </span><span class="sd">"""Load a TOML config file.</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a>
+</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a><span class="sd">    Args:</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="sd">        path: Path to a ``.toml`` file.</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a>
+</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="sd">    Returns:</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a><span class="sd">        dict of settings.</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a>
+</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="sd">    Raises:</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a><span class="sd">        FileNotFoundError: If the file does not exist.</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a><span class="sd">        tomllib.TOMLDecodeError: If the file is not valid TOML.</span>
+</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a><span class="sd">    """</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a>        <span class="k">return</span> <span class="n">tomllib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a>
+</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a>
+</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a><span class="w">    </span><span class="sd">"""Read an image file into a numpy array.</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a>
+</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a><span class="sd">    Args:</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a><span class="sd">        path: Path to a PNG (or any format Pillow reads).</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a>
+</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a><span class="sd">    Returns:</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a><span class="sd">        uint8 array, (H, W) for greyscale or (H, W, C) for colour.</span>
 </span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a>
-</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a>
-</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a><span class="k">def</span><span class="w"> </span><span class="nf">find_samples</span><span class="p">(</span><span class="n">data_root</span><span class="p">,</span> <span class="n">season</span><span class="o">=</span><span class="s2">"Summer"</span><span class="p">,</span> <span class="n">exclude_rows</span><span class="o">=</span><span class="p">()):</span>
-</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a><span class="w">    </span><span class="sd">"""List image files for one season, skipping excluded rows.</span>
-</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a>
-</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a><span class="sd">    The exact file naming is still being confirmed with the teaching team,</span>
-</span><span id="L-43"><a href="#L-43"><span class="linenos">43</span></a><span class="sd">    so this matches on the season name and tree-ID prefix only.</span>
-</span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a>
-</span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a><span class="sd">    Args:</span>
-</span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a><span class="sd">        data_root: Folder containing the dataset.</span>
-</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a><span class="sd">        season: "Summer" or "Winter".</span>
-</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a><span class="sd">        exclude_rows: Row prefixes such as ``"R04"`` to skip.</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="sd">    Raises:</span>
+</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a><span class="sd">        FileNotFoundError: If the file does not exist.</span>
+</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a><span class="sd">    """</span>
+</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a>
+</span><span id="L-43"><a href="#L-43"><span class="linenos">43</span></a>
+</span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_depth</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a><span class="w">    </span><span class="sd">"""Read an 8-bit depth image as a single-channel array.</span>
+</span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a>
+</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a><span class="sd">    Some TreeID depth PNGs store the grey value in three identical channels;</span>
+</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a><span class="sd">    only the first is kept.</span>
 </span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a>
-</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a><span class="sd">    Returns:</span>
-</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a><span class="sd">        Sorted list of ``Path`` objects.</span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a><span class="sd">    """</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a>    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_root</span><span class="p">)</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a>    <span class="n">files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="sa">f</span><span class="s2">"*</span><span class="si">{</span><span class="n">season</span><span class="si">}</span><span class="s2">*.png"</span><span class="p">))</span>
-</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a>    <span class="k">return</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">exclude_rows</span><span class="p">)]</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a><span class="sd">    Args:</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a><span class="sd">        path: Path to the depth PNG.</span>
+</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a>
+</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a><span class="sd">    Returns:</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a><span class="sd">        (H, W) uint8 array; 0 means no depth reading.</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a>
+</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a><span class="sd">    Raises:</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a><span class="sd">        FileNotFoundError: If the file does not exist.</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a><span class="sd">    """</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a>    <span class="n">depth</span> <span class="o">=</span> <span class="n">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a>    <span class="k">return</span> <span class="n">depth</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">depth</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">depth</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a>
+</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a>
+</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_mask</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a><span class="w">    </span><span class="sd">"""Read a ground-truth mask as a boolean array (white = branch).</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>
+</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a><span class="sd">    Args:</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a><span class="sd">        path: Path to a ``_GT`` mask PNG.</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>
+</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a><span class="sd">    Returns:</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a><span class="sd">        (H, W) boolean array, True where the pixel value is above 127.</span>
+</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a>
+</span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a><span class="sd">    Raises:</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos">73</span></a><span class="sd">        FileNotFoundError: If the file does not exist.</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos">74</span></a><span class="sd">    """</span>
+</span><span id="L-75"><a href="#L-75"><span class="linenos">75</span></a>    <span class="n">img</span> <span class="o">=</span> <span class="n">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos">76</span></a>    <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos">77</span></a>        <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span id="L-78"><a href="#L-78"><span class="linenos">78</span></a>    <span class="k">return</span> <span class="n">img</span> <span class="o">&gt;</span> <span class="mi">127</span>
 </span></pre></div>
 
 
@@ -137,17 +160,21 @@ utils    </h1>
 
     </div>
     <a class="headerlink" href="#load_config"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="load_config-14"><a href="#load_config-14"><span class="linenos">14</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-</span><span id="load_config-15"><a href="#load_config-15"><span class="linenos">15</span></a><span class="w">    </span><span class="sd">"""Load a TOML config file.</span>
-</span><span id="load_config-16"><a href="#load_config-16"><span class="linenos">16</span></a>
-</span><span id="load_config-17"><a href="#load_config-17"><span class="linenos">17</span></a><span class="sd">    Args:</span>
-</span><span id="load_config-18"><a href="#load_config-18"><span class="linenos">18</span></a><span class="sd">        path: Path to a ``.toml`` file.</span>
-</span><span id="load_config-19"><a href="#load_config-19"><span class="linenos">19</span></a>
-</span><span id="load_config-20"><a href="#load_config-20"><span class="linenos">20</span></a><span class="sd">    Returns:</span>
-</span><span id="load_config-21"><a href="#load_config-21"><span class="linenos">21</span></a><span class="sd">        dict of settings.</span>
-</span><span id="load_config-22"><a href="#load_config-22"><span class="linenos">22</span></a><span class="sd">    """</span>
-</span><span id="load_config-23"><a href="#load_config-23"><span class="linenos">23</span></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span><span id="load_config-24"><a href="#load_config-24"><span class="linenos">24</span></a>        <span class="k">return</span> <span class="n">tomllib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="load_config-13"><a href="#load_config-13"><span class="linenos">13</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</span><span id="load_config-14"><a href="#load_config-14"><span class="linenos">14</span></a><span class="w">    </span><span class="sd">"""Load a TOML config file.</span>
+</span><span id="load_config-15"><a href="#load_config-15"><span class="linenos">15</span></a>
+</span><span id="load_config-16"><a href="#load_config-16"><span class="linenos">16</span></a><span class="sd">    Args:</span>
+</span><span id="load_config-17"><a href="#load_config-17"><span class="linenos">17</span></a><span class="sd">        path: Path to a ``.toml`` file.</span>
+</span><span id="load_config-18"><a href="#load_config-18"><span class="linenos">18</span></a>
+</span><span id="load_config-19"><a href="#load_config-19"><span class="linenos">19</span></a><span class="sd">    Returns:</span>
+</span><span id="load_config-20"><a href="#load_config-20"><span class="linenos">20</span></a><span class="sd">        dict of settings.</span>
+</span><span id="load_config-21"><a href="#load_config-21"><span class="linenos">21</span></a>
+</span><span id="load_config-22"><a href="#load_config-22"><span class="linenos">22</span></a><span class="sd">    Raises:</span>
+</span><span id="load_config-23"><a href="#load_config-23"><span class="linenos">23</span></a><span class="sd">        FileNotFoundError: If the file does not exist.</span>
+</span><span id="load_config-24"><a href="#load_config-24"><span class="linenos">24</span></a><span class="sd">        tomllib.TOMLDecodeError: If the file is not valid TOML.</span>
+</span><span id="load_config-25"><a href="#load_config-25"><span class="linenos">25</span></a><span class="sd">    """</span>
+</span><span id="load_config-26"><a href="#load_config-26"><span class="linenos">26</span></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="load_config-27"><a href="#load_config-27"><span class="linenos">27</span></a>        <span class="k">return</span> <span class="n">tomllib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -158,6 +185,10 @@ utils    </h1>
 
 <p>Returns:
     dict of settings.</p>
+
+<p>Raises:
+    FileNotFoundError: If the file does not exist.
+    tomllib.TOMLDecodeError: If the file is not valid TOML.</p>
 </div>
 
 
@@ -173,13 +204,80 @@ utils    </h1>
 
     </div>
     <a class="headerlink" href="#read_image"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="read_image-27"><a href="#read_image-27"><span class="linenos">27</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-</span><span id="read_image-28"><a href="#read_image-28"><span class="linenos">28</span></a><span class="w">    </span><span class="sd">"""Read an image file into a numpy array (uint8)."""</span>
-</span><span id="read_image-29"><a href="#read_image-29"><span class="linenos">29</span></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="read_image-30"><a href="#read_image-30"><span class="linenos">30</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</span><span id="read_image-31"><a href="#read_image-31"><span class="linenos">31</span></a><span class="w">    </span><span class="sd">"""Read an image file into a numpy array.</span>
+</span><span id="read_image-32"><a href="#read_image-32"><span class="linenos">32</span></a>
+</span><span id="read_image-33"><a href="#read_image-33"><span class="linenos">33</span></a><span class="sd">    Args:</span>
+</span><span id="read_image-34"><a href="#read_image-34"><span class="linenos">34</span></a><span class="sd">        path: Path to a PNG (or any format Pillow reads).</span>
+</span><span id="read_image-35"><a href="#read_image-35"><span class="linenos">35</span></a>
+</span><span id="read_image-36"><a href="#read_image-36"><span class="linenos">36</span></a><span class="sd">    Returns:</span>
+</span><span id="read_image-37"><a href="#read_image-37"><span class="linenos">37</span></a><span class="sd">        uint8 array, (H, W) for greyscale or (H, W, C) for colour.</span>
+</span><span id="read_image-38"><a href="#read_image-38"><span class="linenos">38</span></a>
+</span><span id="read_image-39"><a href="#read_image-39"><span class="linenos">39</span></a><span class="sd">    Raises:</span>
+</span><span id="read_image-40"><a href="#read_image-40"><span class="linenos">40</span></a><span class="sd">        FileNotFoundError: If the file does not exist.</span>
+</span><span id="read_image-41"><a href="#read_image-41"><span class="linenos">41</span></a><span class="sd">    """</span>
+</span><span id="read_image-42"><a href="#read_image-42"><span class="linenos">42</span></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
 </span></pre></div>
 
 
-            <div class="docstring"><p>Read an image file into a numpy array (uint8).</p>
+            <div class="docstring"><p>Read an image file into a numpy array.</p>
+
+<p>Args:
+    path: Path to a PNG (or any format Pillow reads).</p>
+
+<p>Returns:
+    uint8 array, (H, W) for greyscale or (H, W, C) for colour.</p>
+
+<p>Raises:
+    FileNotFoundError: If the file does not exist.</p>
+</div>
+
+
+                </section>
+                <section id="read_depth">
+                            <input id="read_depth-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">read_depth</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">path</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="read_depth-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#read_depth"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="read_depth-45"><a href="#read_depth-45"><span class="linenos">45</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_depth</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</span><span id="read_depth-46"><a href="#read_depth-46"><span class="linenos">46</span></a><span class="w">    </span><span class="sd">"""Read an 8-bit depth image as a single-channel array.</span>
+</span><span id="read_depth-47"><a href="#read_depth-47"><span class="linenos">47</span></a>
+</span><span id="read_depth-48"><a href="#read_depth-48"><span class="linenos">48</span></a><span class="sd">    Some TreeID depth PNGs store the grey value in three identical channels;</span>
+</span><span id="read_depth-49"><a href="#read_depth-49"><span class="linenos">49</span></a><span class="sd">    only the first is kept.</span>
+</span><span id="read_depth-50"><a href="#read_depth-50"><span class="linenos">50</span></a>
+</span><span id="read_depth-51"><a href="#read_depth-51"><span class="linenos">51</span></a><span class="sd">    Args:</span>
+</span><span id="read_depth-52"><a href="#read_depth-52"><span class="linenos">52</span></a><span class="sd">        path: Path to the depth PNG.</span>
+</span><span id="read_depth-53"><a href="#read_depth-53"><span class="linenos">53</span></a>
+</span><span id="read_depth-54"><a href="#read_depth-54"><span class="linenos">54</span></a><span class="sd">    Returns:</span>
+</span><span id="read_depth-55"><a href="#read_depth-55"><span class="linenos">55</span></a><span class="sd">        (H, W) uint8 array; 0 means no depth reading.</span>
+</span><span id="read_depth-56"><a href="#read_depth-56"><span class="linenos">56</span></a>
+</span><span id="read_depth-57"><a href="#read_depth-57"><span class="linenos">57</span></a><span class="sd">    Raises:</span>
+</span><span id="read_depth-58"><a href="#read_depth-58"><span class="linenos">58</span></a><span class="sd">        FileNotFoundError: If the file does not exist.</span>
+</span><span id="read_depth-59"><a href="#read_depth-59"><span class="linenos">59</span></a><span class="sd">    """</span>
+</span><span id="read_depth-60"><a href="#read_depth-60"><span class="linenos">60</span></a>    <span class="n">depth</span> <span class="o">=</span> <span class="n">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="read_depth-61"><a href="#read_depth-61"><span class="linenos">61</span></a>    <span class="k">return</span> <span class="n">depth</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">depth</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">depth</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Read an 8-bit depth image as a single-channel array.</p>
+
+<p>Some TreeID depth PNGs store the grey value in three identical channels;
+only the first is kept.</p>
+
+<p>Args:
+    path: Path to the depth PNG.</p>
+
+<p>Returns:
+    (H, W) uint8 array; 0 means no depth reading.</p>
+
+<p>Raises:
+    FileNotFoundError: If the file does not exist.</p>
 </div>
 
 
@@ -195,63 +293,35 @@ utils    </h1>
 
     </div>
     <a class="headerlink" href="#read_mask"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="read_mask-32"><a href="#read_mask-32"><span class="linenos">32</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_mask</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-</span><span id="read_mask-33"><a href="#read_mask-33"><span class="linenos">33</span></a><span class="w">    </span><span class="sd">"""Read a ground-truth mask and return it as a boolean array (white = branch)."""</span>
-</span><span id="read_mask-34"><a href="#read_mask-34"><span class="linenos">34</span></a>    <span class="n">img</span> <span class="o">=</span> <span class="n">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="read_mask-35"><a href="#read_mask-35"><span class="linenos">35</span></a>    <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-</span><span id="read_mask-36"><a href="#read_mask-36"><span class="linenos">36</span></a>        <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
-</span><span id="read_mask-37"><a href="#read_mask-37"><span class="linenos">37</span></a>    <span class="k">return</span> <span class="n">img</span> <span class="o">&gt;</span> <span class="mi">127</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="read_mask-64"><a href="#read_mask-64"><span class="linenos">64</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_mask</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+</span><span id="read_mask-65"><a href="#read_mask-65"><span class="linenos">65</span></a><span class="w">    </span><span class="sd">"""Read a ground-truth mask as a boolean array (white = branch).</span>
+</span><span id="read_mask-66"><a href="#read_mask-66"><span class="linenos">66</span></a>
+</span><span id="read_mask-67"><a href="#read_mask-67"><span class="linenos">67</span></a><span class="sd">    Args:</span>
+</span><span id="read_mask-68"><a href="#read_mask-68"><span class="linenos">68</span></a><span class="sd">        path: Path to a ``_GT`` mask PNG.</span>
+</span><span id="read_mask-69"><a href="#read_mask-69"><span class="linenos">69</span></a>
+</span><span id="read_mask-70"><a href="#read_mask-70"><span class="linenos">70</span></a><span class="sd">    Returns:</span>
+</span><span id="read_mask-71"><a href="#read_mask-71"><span class="linenos">71</span></a><span class="sd">        (H, W) boolean array, True where the pixel value is above 127.</span>
+</span><span id="read_mask-72"><a href="#read_mask-72"><span class="linenos">72</span></a>
+</span><span id="read_mask-73"><a href="#read_mask-73"><span class="linenos">73</span></a><span class="sd">    Raises:</span>
+</span><span id="read_mask-74"><a href="#read_mask-74"><span class="linenos">74</span></a><span class="sd">        FileNotFoundError: If the file does not exist.</span>
+</span><span id="read_mask-75"><a href="#read_mask-75"><span class="linenos">75</span></a><span class="sd">    """</span>
+</span><span id="read_mask-76"><a href="#read_mask-76"><span class="linenos">76</span></a>    <span class="n">img</span> <span class="o">=</span> <span class="n">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="read_mask-77"><a href="#read_mask-77"><span class="linenos">77</span></a>    <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+</span><span id="read_mask-78"><a href="#read_mask-78"><span class="linenos">78</span></a>        <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span id="read_mask-79"><a href="#read_mask-79"><span class="linenos">79</span></a>    <span class="k">return</span> <span class="n">img</span> <span class="o">&gt;</span> <span class="mi">127</span>
 </span></pre></div>
 
 
-            <div class="docstring"><p>Read a ground-truth mask and return it as a boolean array (white = branch).</p>
-</div>
-
-
-                </section>
-                <section id="find_samples">
-                            <input id="find_samples-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-<div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">find_samples</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">data_root</span>, </span><span class="param"><span class="n">season</span><span class="o">=</span><span class="s1">'Summer'</span>, </span><span class="param"><span class="n">exclude_rows</span><span class="o">=</span><span class="p">()</span></span><span class="return-annotation">):</span></span>
-
-                <label class="view-source-button" for="find_samples-view-source"><span>View Source</span></label>
-
-    </div>
-    <a class="headerlink" href="#find_samples"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="find_samples-40"><a href="#find_samples-40"><span class="linenos">40</span></a><span class="k">def</span><span class="w"> </span><span class="nf">find_samples</span><span class="p">(</span><span class="n">data_root</span><span class="p">,</span> <span class="n">season</span><span class="o">=</span><span class="s2">"Summer"</span><span class="p">,</span> <span class="n">exclude_rows</span><span class="o">=</span><span class="p">()):</span>
-</span><span id="find_samples-41"><a href="#find_samples-41"><span class="linenos">41</span></a><span class="w">    </span><span class="sd">"""List image files for one season, skipping excluded rows.</span>
-</span><span id="find_samples-42"><a href="#find_samples-42"><span class="linenos">42</span></a>
-</span><span id="find_samples-43"><a href="#find_samples-43"><span class="linenos">43</span></a><span class="sd">    The exact file naming is still being confirmed with the teaching team,</span>
-</span><span id="find_samples-44"><a href="#find_samples-44"><span class="linenos">44</span></a><span class="sd">    so this matches on the season name and tree-ID prefix only.</span>
-</span><span id="find_samples-45"><a href="#find_samples-45"><span class="linenos">45</span></a>
-</span><span id="find_samples-46"><a href="#find_samples-46"><span class="linenos">46</span></a><span class="sd">    Args:</span>
-</span><span id="find_samples-47"><a href="#find_samples-47"><span class="linenos">47</span></a><span class="sd">        data_root: Folder containing the dataset.</span>
-</span><span id="find_samples-48"><a href="#find_samples-48"><span class="linenos">48</span></a><span class="sd">        season: "Summer" or "Winter".</span>
-</span><span id="find_samples-49"><a href="#find_samples-49"><span class="linenos">49</span></a><span class="sd">        exclude_rows: Row prefixes such as ``"R04"`` to skip.</span>
-</span><span id="find_samples-50"><a href="#find_samples-50"><span class="linenos">50</span></a>
-</span><span id="find_samples-51"><a href="#find_samples-51"><span class="linenos">51</span></a><span class="sd">    Returns:</span>
-</span><span id="find_samples-52"><a href="#find_samples-52"><span class="linenos">52</span></a><span class="sd">        Sorted list of ``Path`` objects.</span>
-</span><span id="find_samples-53"><a href="#find_samples-53"><span class="linenos">53</span></a><span class="sd">    """</span>
-</span><span id="find_samples-54"><a href="#find_samples-54"><span class="linenos">54</span></a>    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_root</span><span class="p">)</span>
-</span><span id="find_samples-55"><a href="#find_samples-55"><span class="linenos">55</span></a>    <span class="n">files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="sa">f</span><span class="s2">"*</span><span class="si">{</span><span class="n">season</span><span class="si">}</span><span class="s2">*.png"</span><span class="p">))</span>
-</span><span id="find_samples-56"><a href="#find_samples-56"><span class="linenos">56</span></a>    <span class="k">return</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">exclude_rows</span><span class="p">)]</span>
-</span></pre></div>
-
-
-            <div class="docstring"><p>List image files for one season, skipping excluded rows.</p>
-
-<p>The exact file naming is still being confirmed with the teaching team,
-so this matches on the season name and tree-ID prefix only.</p>
+            <div class="docstring"><p>Read a ground-truth mask as a boolean array (white = branch).</p>
 
 <p>Args:
-    data_root: Folder containing the dataset.
-    season: "Summer" or "Winter".
-    exclude_rows: Row prefixes such as <code>"R04"</code> to skip.</p>
+    path: Path to a <code>_GT</code> mask PNG.</p>
 
 <p>Returns:
-    Sorted list of <code>Path</code> objects.</p>
+    (H, W) boolean array, True where the pixel value is above 127.</p>
+
+<p>Raises:
+    FileNotFoundError: If the file does not exist.</p>
 </div>
 
 
