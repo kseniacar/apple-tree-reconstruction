@@ -47,6 +47,9 @@
             <li>
                     <a class="function" href="#chamfer_distance">chamfer_distance</a>
             </li>
+            <li>
+                    <a class="function" href="#occluded_recall">occluded_recall</a>
+            </li>
     </ul>
 
 
@@ -188,6 +191,35 @@ one-pixel-wide centrelines are, in pixels.</p>
 </span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>    <span class="n">dist_to_b</span> <span class="o">=</span> <span class="n">distance_transform_edt</span><span class="p">(</span><span class="o">~</span><span class="n">b</span><span class="p">)</span>
 </span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>    <span class="n">dist_to_a</span> <span class="o">=</span> <span class="n">distance_transform_edt</span><span class="p">(</span><span class="o">~</span><span class="n">a</span><span class="p">)</span>
 </span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">dist_to_b</span><span class="p">[</span><span class="n">a</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">dist_to_a</span><span class="p">[</span><span class="n">b</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a><span class="k">def</span><span class="w"> </span><span class="nf">occluded_recall</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">visible</span><span class="p">):</span>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a><span class="w">    </span><span class="sd">"""Recall on the ground-truth branch pixels that are hidden from the camera.</span>
+</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a><span class="sd">    This is the metric that tests the actual problem: a method that only finds</span>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a><span class="sd">    visible bark scores well on ordinary recall but close to zero here. Without</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="sd">    per-pixel visibility labels, ``visible`` is approximated by a visible-bark</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a><span class="sd">    detector (in ``train.py``, the baseline mask); GT pixels it does not fire on</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="sd">    count as hidden.</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a><span class="sd">    Args:</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a><span class="sd">        pred: Boolean array, the predicted mask.</span>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a><span class="sd">        gt: Boolean array of the same shape, the ground-truth mask.</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a><span class="sd">        visible: Boolean array of the same shape, True where wood is visible.</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a><span class="sd">    Returns:</span>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a><span class="sd">        Fraction of hidden GT pixels (``gt &amp; ~visible``) that ``pred`` marks as</span>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a><span class="sd">        branch, in [0, 1]; ``nan`` if no GT pixel is hidden.</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a><span class="sd">    Raises:</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a><span class="sd">        ValueError: If the three arrays do not all have the same shape.</span>
+</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a><span class="sd">    """</span>
+</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>    <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">visible</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">visible</span><span class="p">))</span>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">pred</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">gt</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">visible</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"shape mismatch: </span><span class="si">{</span><span class="n">pred</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">gt</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">visible</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>    <span class="n">hidden</span> <span class="o">=</span> <span class="n">gt</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">visible</span>
+</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>    <span class="n">n</span> <span class="o">=</span> <span class="n">hidden</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span> <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="nb">float</span><span class="p">((</span><span class="n">pred</span> <span class="o">&amp;</span> <span class="n">hidden</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -434,6 +466,70 @@ averaged.</p>
 
 <p>Returns:
     float distance in pixels; <code>inf</code> if either skeleton is empty.</p>
+</div>
+
+
+                </section>
+                <section id="occluded_recall">
+                            <input id="occluded_recall-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">occluded_recall</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">pred</span>, </span><span class="param"><span class="n">gt</span>, </span><span class="param"><span class="n">visible</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="occluded_recall-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#occluded_recall"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="occluded_recall-118"><a href="#occluded_recall-118"><span class="linenos">118</span></a><span class="k">def</span><span class="w"> </span><span class="nf">occluded_recall</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">visible</span><span class="p">):</span>
+</span><span id="occluded_recall-119"><a href="#occluded_recall-119"><span class="linenos">119</span></a><span class="w">    </span><span class="sd">"""Recall on the ground-truth branch pixels that are hidden from the camera.</span>
+</span><span id="occluded_recall-120"><a href="#occluded_recall-120"><span class="linenos">120</span></a>
+</span><span id="occluded_recall-121"><a href="#occluded_recall-121"><span class="linenos">121</span></a><span class="sd">    This is the metric that tests the actual problem: a method that only finds</span>
+</span><span id="occluded_recall-122"><a href="#occluded_recall-122"><span class="linenos">122</span></a><span class="sd">    visible bark scores well on ordinary recall but close to zero here. Without</span>
+</span><span id="occluded_recall-123"><a href="#occluded_recall-123"><span class="linenos">123</span></a><span class="sd">    per-pixel visibility labels, ``visible`` is approximated by a visible-bark</span>
+</span><span id="occluded_recall-124"><a href="#occluded_recall-124"><span class="linenos">124</span></a><span class="sd">    detector (in ``train.py``, the baseline mask); GT pixels it does not fire on</span>
+</span><span id="occluded_recall-125"><a href="#occluded_recall-125"><span class="linenos">125</span></a><span class="sd">    count as hidden.</span>
+</span><span id="occluded_recall-126"><a href="#occluded_recall-126"><span class="linenos">126</span></a>
+</span><span id="occluded_recall-127"><a href="#occluded_recall-127"><span class="linenos">127</span></a><span class="sd">    Args:</span>
+</span><span id="occluded_recall-128"><a href="#occluded_recall-128"><span class="linenos">128</span></a><span class="sd">        pred: Boolean array, the predicted mask.</span>
+</span><span id="occluded_recall-129"><a href="#occluded_recall-129"><span class="linenos">129</span></a><span class="sd">        gt: Boolean array of the same shape, the ground-truth mask.</span>
+</span><span id="occluded_recall-130"><a href="#occluded_recall-130"><span class="linenos">130</span></a><span class="sd">        visible: Boolean array of the same shape, True where wood is visible.</span>
+</span><span id="occluded_recall-131"><a href="#occluded_recall-131"><span class="linenos">131</span></a>
+</span><span id="occluded_recall-132"><a href="#occluded_recall-132"><span class="linenos">132</span></a><span class="sd">    Returns:</span>
+</span><span id="occluded_recall-133"><a href="#occluded_recall-133"><span class="linenos">133</span></a><span class="sd">        Fraction of hidden GT pixels (``gt &amp; ~visible``) that ``pred`` marks as</span>
+</span><span id="occluded_recall-134"><a href="#occluded_recall-134"><span class="linenos">134</span></a><span class="sd">        branch, in [0, 1]; ``nan`` if no GT pixel is hidden.</span>
+</span><span id="occluded_recall-135"><a href="#occluded_recall-135"><span class="linenos">135</span></a>
+</span><span id="occluded_recall-136"><a href="#occluded_recall-136"><span class="linenos">136</span></a><span class="sd">    Raises:</span>
+</span><span id="occluded_recall-137"><a href="#occluded_recall-137"><span class="linenos">137</span></a><span class="sd">        ValueError: If the three arrays do not all have the same shape.</span>
+</span><span id="occluded_recall-138"><a href="#occluded_recall-138"><span class="linenos">138</span></a><span class="sd">    """</span>
+</span><span id="occluded_recall-139"><a href="#occluded_recall-139"><span class="linenos">139</span></a>    <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">visible</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">visible</span><span class="p">))</span>
+</span><span id="occluded_recall-140"><a href="#occluded_recall-140"><span class="linenos">140</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">pred</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">gt</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">visible</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+</span><span id="occluded_recall-141"><a href="#occluded_recall-141"><span class="linenos">141</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"shape mismatch: </span><span class="si">{</span><span class="n">pred</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">gt</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">visible</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="occluded_recall-142"><a href="#occluded_recall-142"><span class="linenos">142</span></a>    <span class="n">hidden</span> <span class="o">=</span> <span class="n">gt</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">visible</span>
+</span><span id="occluded_recall-143"><a href="#occluded_recall-143"><span class="linenos">143</span></a>    <span class="n">n</span> <span class="o">=</span> <span class="n">hidden</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+</span><span id="occluded_recall-144"><a href="#occluded_recall-144"><span class="linenos">144</span></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span> <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="nb">float</span><span class="p">((</span><span class="n">pred</span> <span class="o">&amp;</span> <span class="n">hidden</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Recall on the ground-truth branch pixels that are hidden from the camera.</p>
+
+<p>This is the metric that tests the actual problem: a method that only finds
+visible bark scores well on ordinary recall but close to zero here. Without
+per-pixel visibility labels, <code>visible</code> is approximated by a visible-bark
+detector (in <code>train.py</code>, the baseline mask); GT pixels it does not fire on
+count as hidden.</p>
+
+<p>Args:
+    pred: Boolean array, the predicted mask.
+    gt: Boolean array of the same shape, the ground-truth mask.
+    visible: Boolean array of the same shape, True where wood is visible.</p>
+
+<p>Returns:
+    Fraction of hidden GT pixels (<code>gt &amp; ~visible</code>) that <code>pred</code> marks as
+    branch, in [0, 1]; <code>nan</code> if no GT pixel is hidden.</p>
+
+<p>Raises:
+    ValueError: If the three arrays do not all have the same shape.</p>
 </div>
 
 

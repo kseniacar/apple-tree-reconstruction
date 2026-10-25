@@ -34,3 +34,7 @@ lr = 0.001
 val_frac = 0.15            # fraction of trees used for validation
 test_frac = 0.15           # fraction of trees held out for the final test
 seed = 0
+
+[eval]                     # extra evaluation (src/train.py, src/crossval.py)
+cv_folds = 5               # k for k-fold cross-validation by tree
+align_max_shift = 50       # largest GT offset (px, at 256 x 256) searched in the alignment check

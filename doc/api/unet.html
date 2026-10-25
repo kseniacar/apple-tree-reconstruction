@@ -62,6 +62,9 @@
             <li>
                     <a class="function" href="#count_parameters">count_parameters</a>
             </li>
+            <li>
+                    <a class="function" href="#count_flops">count_flops</a>
+            </li>
     </ul>
 
 
@@ -131,6 +134,44 @@ unet    </h1>
 </span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a><span class="k">def</span><span class="w"> </span><span class="nf">count_parameters</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
 </span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a><span class="w">    </span><span class="sd">"""Number of trainable parameters."""</span>
 </span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a>    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">()</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">)</span>
+</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a>
+</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a>
+</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a><span class="k">def</span><span class="w"> </span><span class="nf">count_flops</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a><span class="w">    </span><span class="sd">"""Estimate the floating-point operations of one forward pass.</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a>
+</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a><span class="sd">    Counts the multiply-accumulates (MACs) of every ``Conv2d`` and</span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a><span class="sd">    ``ConvTranspose2d`` layer with forward hooks and reports FLOPs = 2 x MACs.</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a><span class="sd">    Batch norm, ReLU, pooling and concatenation are left out; they are a few</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a><span class="sd">    percent of the total for this network. The total size of the layer outputs</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a><span class="sd">    is also returned, for a rough arithmetic-intensity estimate.</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a>
+</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a><span class="sd">    Args:</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a><span class="sd">        model: A ``torch.nn.Module`` such as ``UNet``.</span>
+</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a><span class="sd">        input_shape: Shape of one input batch, e.g. ``(1, 4, 256, 256)``.</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a>
+</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a><span class="sd">    Returns:</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a><span class="sd">        Tuple ``(flops, activations)``: FLOPs of the convolution layers and the</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a><span class="sd">        number of values in their outputs, for the whole batch.</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a><span class="sd">    """</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>    <span class="n">totals</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"macs"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"acts"</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>
+</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">hook</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>        <span class="n">k</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">layer</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">layer</span><span class="o">.</span><span class="n">in_channels</span> <span class="o">//</span> <span class="n">layer</span><span class="o">.</span><span class="n">groups</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">):</span>
+</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a>            <span class="c1"># every input value is multiplied by every output channel's kernel</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a>            <span class="n">totals</span><span class="p">[</span><span class="s2">"macs"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">*</span> <span class="n">layer</span><span class="o">.</span><span class="n">out_channels</span> <span class="o">*</span> <span class="n">k</span> <span class="o">//</span> <span class="n">layer</span><span class="o">.</span><span class="n">in_channels</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos">73</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos">74</span></a>            <span class="n">totals</span><span class="p">[</span><span class="s2">"macs"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">output</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">*</span> <span class="n">k</span>
+</span><span id="L-75"><a href="#L-75"><span class="linenos">75</span></a>        <span class="n">totals</span><span class="p">[</span><span class="s2">"acts"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">output</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos">76</span></a>
+</span><span id="L-77"><a href="#L-77"><span class="linenos">77</span></a>    <span class="n">handles</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">register_forward_hook</span><span class="p">(</span><span class="n">hook</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">modules</span><span class="p">()</span>
+</span><span id="L-78"><a href="#L-78"><span class="linenos">78</span></a>               <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">))]</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos">79</span></a>    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+</span><span id="L-80"><a href="#L-80"><span class="linenos">80</span></a>    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+</span><span id="L-81"><a href="#L-81"><span class="linenos">81</span></a>        <span class="n">model</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos">82</span></a>    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">:</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos">83</span></a>        <span class="n">h</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos">84</span></a>    <span class="k">return</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">totals</span><span class="p">[</span><span class="s2">"macs"</span><span class="p">],</span> <span class="n">totals</span><span class="p">[</span><span class="s2">"acts"</span><span class="p">]</span>
 </span></pre></div>
 
 
@@ -326,6 +367,75 @@ registered hooks while the latter silently ignores them.</p>
 
 
             <div class="docstring"><p>Number of trainable parameters.</p>
+</div>
+
+
+                </section>
+                <section id="count_flops">
+                            <input id="count_flops-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">count_flops</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">model</span>, </span><span class="param"><span class="n">input_shape</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="count_flops-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#count_flops"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="count_flops-50"><a href="#count_flops-50"><span class="linenos">50</span></a><span class="k">def</span><span class="w"> </span><span class="nf">count_flops</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">):</span>
+</span><span id="count_flops-51"><a href="#count_flops-51"><span class="linenos">51</span></a><span class="w">    </span><span class="sd">"""Estimate the floating-point operations of one forward pass.</span>
+</span><span id="count_flops-52"><a href="#count_flops-52"><span class="linenos">52</span></a>
+</span><span id="count_flops-53"><a href="#count_flops-53"><span class="linenos">53</span></a><span class="sd">    Counts the multiply-accumulates (MACs) of every ``Conv2d`` and</span>
+</span><span id="count_flops-54"><a href="#count_flops-54"><span class="linenos">54</span></a><span class="sd">    ``ConvTranspose2d`` layer with forward hooks and reports FLOPs = 2 x MACs.</span>
+</span><span id="count_flops-55"><a href="#count_flops-55"><span class="linenos">55</span></a><span class="sd">    Batch norm, ReLU, pooling and concatenation are left out; they are a few</span>
+</span><span id="count_flops-56"><a href="#count_flops-56"><span class="linenos">56</span></a><span class="sd">    percent of the total for this network. The total size of the layer outputs</span>
+</span><span id="count_flops-57"><a href="#count_flops-57"><span class="linenos">57</span></a><span class="sd">    is also returned, for a rough arithmetic-intensity estimate.</span>
+</span><span id="count_flops-58"><a href="#count_flops-58"><span class="linenos">58</span></a>
+</span><span id="count_flops-59"><a href="#count_flops-59"><span class="linenos">59</span></a><span class="sd">    Args:</span>
+</span><span id="count_flops-60"><a href="#count_flops-60"><span class="linenos">60</span></a><span class="sd">        model: A ``torch.nn.Module`` such as ``UNet``.</span>
+</span><span id="count_flops-61"><a href="#count_flops-61"><span class="linenos">61</span></a><span class="sd">        input_shape: Shape of one input batch, e.g. ``(1, 4, 256, 256)``.</span>
+</span><span id="count_flops-62"><a href="#count_flops-62"><span class="linenos">62</span></a>
+</span><span id="count_flops-63"><a href="#count_flops-63"><span class="linenos">63</span></a><span class="sd">    Returns:</span>
+</span><span id="count_flops-64"><a href="#count_flops-64"><span class="linenos">64</span></a><span class="sd">        Tuple ``(flops, activations)``: FLOPs of the convolution layers and the</span>
+</span><span id="count_flops-65"><a href="#count_flops-65"><span class="linenos">65</span></a><span class="sd">        number of values in their outputs, for the whole batch.</span>
+</span><span id="count_flops-66"><a href="#count_flops-66"><span class="linenos">66</span></a><span class="sd">    """</span>
+</span><span id="count_flops-67"><a href="#count_flops-67"><span class="linenos">67</span></a>    <span class="n">totals</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"macs"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"acts"</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+</span><span id="count_flops-68"><a href="#count_flops-68"><span class="linenos">68</span></a>
+</span><span id="count_flops-69"><a href="#count_flops-69"><span class="linenos">69</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">hook</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+</span><span id="count_flops-70"><a href="#count_flops-70"><span class="linenos">70</span></a>        <span class="n">k</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">layer</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">layer</span><span class="o">.</span><span class="n">in_channels</span> <span class="o">//</span> <span class="n">layer</span><span class="o">.</span><span class="n">groups</span>
+</span><span id="count_flops-71"><a href="#count_flops-71"><span class="linenos">71</span></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">):</span>
+</span><span id="count_flops-72"><a href="#count_flops-72"><span class="linenos">72</span></a>            <span class="c1"># every input value is multiplied by every output channel's kernel</span>
+</span><span id="count_flops-73"><a href="#count_flops-73"><span class="linenos">73</span></a>            <span class="n">totals</span><span class="p">[</span><span class="s2">"macs"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">*</span> <span class="n">layer</span><span class="o">.</span><span class="n">out_channels</span> <span class="o">*</span> <span class="n">k</span> <span class="o">//</span> <span class="n">layer</span><span class="o">.</span><span class="n">in_channels</span>
+</span><span id="count_flops-74"><a href="#count_flops-74"><span class="linenos">74</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="count_flops-75"><a href="#count_flops-75"><span class="linenos">75</span></a>            <span class="n">totals</span><span class="p">[</span><span class="s2">"macs"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">output</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">*</span> <span class="n">k</span>
+</span><span id="count_flops-76"><a href="#count_flops-76"><span class="linenos">76</span></a>        <span class="n">totals</span><span class="p">[</span><span class="s2">"acts"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">output</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span>
+</span><span id="count_flops-77"><a href="#count_flops-77"><span class="linenos">77</span></a>
+</span><span id="count_flops-78"><a href="#count_flops-78"><span class="linenos">78</span></a>    <span class="n">handles</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">register_forward_hook</span><span class="p">(</span><span class="n">hook</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">modules</span><span class="p">()</span>
+</span><span id="count_flops-79"><a href="#count_flops-79"><span class="linenos">79</span></a>               <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">))]</span>
+</span><span id="count_flops-80"><a href="#count_flops-80"><span class="linenos">80</span></a>    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+</span><span id="count_flops-81"><a href="#count_flops-81"><span class="linenos">81</span></a>    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+</span><span id="count_flops-82"><a href="#count_flops-82"><span class="linenos">82</span></a>        <span class="n">model</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">input_shape</span><span class="p">))</span>
+</span><span id="count_flops-83"><a href="#count_flops-83"><span class="linenos">83</span></a>    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">:</span>
+</span><span id="count_flops-84"><a href="#count_flops-84"><span class="linenos">84</span></a>        <span class="n">h</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</span><span id="count_flops-85"><a href="#count_flops-85"><span class="linenos">85</span></a>    <span class="k">return</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">totals</span><span class="p">[</span><span class="s2">"macs"</span><span class="p">],</span> <span class="n">totals</span><span class="p">[</span><span class="s2">"acts"</span><span class="p">]</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Estimate the floating-point operations of one forward pass.</p>
+
+<p>Counts the multiply-accumulates (MACs) of every <code>Conv2d</code> and
+<code>ConvTranspose2d</code> layer with forward hooks and reports FLOPs = 2 x MACs.
+Batch norm, ReLU, pooling and concatenation are left out; they are a few
+percent of the total for this network. The total size of the layer outputs
+is also returned, for a rough arithmetic-intensity estimate.</p>
+
+<p>Args:
+    model: A <code>torch.nn.Module</code> such as <code><a href="#UNet">UNet</a></code>.
+    input_shape: Shape of one input batch, e.g. <code>(1, 4, 256, 256)</code>.</p>
+
+<p>Returns:
+    Tuple <code>(flops, activations)</code>: FLOPs of the convolution layers and the
+    number of values in their outputs, for the whole batch.</p>
 </div>
 
 

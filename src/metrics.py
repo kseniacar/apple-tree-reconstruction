@@ -112,3 +112,32 @@ def chamfer_distance(skel_a, skel_b):
     dist_to_b = distance_transform_edt(~b)
     dist_to_a = distance_transform_edt(~a)
     return 0.5 * (dist_to_b[a].mean() + dist_to_a[b].mean())
+
+
+def occluded_recall(pred, gt, visible):
+    """Recall on the ground-truth branch pixels that are hidden from the camera.
+
+    This is the metric that tests the actual problem: a method that only finds
+    visible bark scores well on ordinary recall but close to zero here. Without
+    per-pixel visibility labels, ``visible`` is approximated by a visible-bark
+    detector (in ``train.py``, the baseline mask); GT pixels it does not fire on
+    count as hidden.
+
+    Args:
+        pred: Boolean array, the predicted mask.
+        gt: Boolean array of the same shape, the ground-truth mask.
+        visible: Boolean array of the same shape, True where wood is visible.
+
+    Returns:
+        Fraction of hidden GT pixels (``gt & ~visible``) that ``pred`` marks as
+        branch, in [0, 1]; ``nan`` if no GT pixel is hidden.
+
+    Raises:
+        ValueError: If the three arrays do not all have the same shape.
+    """
+    pred, gt, visible = (np.asarray(a, bool) for a in (pred, gt, visible))
+    if not pred.shape == gt.shape == visible.shape:
+        raise ValueError(f"shape mismatch: {pred.shape}, {gt.shape}, {visible.shape}")
+    hidden = gt & ~visible
+    n = hidden.sum()
+    return float("nan") if n == 0 else float((pred & hidden).sum() / n)

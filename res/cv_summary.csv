@@ -1,0 +1,6 @@
+model,mean_dice,std_dice,folds
+prior,0.3788,0.0132,5
+linear,0.2191,0.0067,5
+tree,0.3658,0.0067,5
+svr,0.2872,0.0125,5
+mlp,0.3726,0.0144,5
