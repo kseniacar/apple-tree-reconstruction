@@ -261,15 +261,24 @@ one-pixel-wide centrelines are, in pixels.</p>
 
             <div class="docstring"><p>Count pixel agreements between a predicted and a true mask.</p>
 
-<p>Args:
-    pred: Boolean array, the predicted mask.
-    gt: Boolean array of the same shape, the ground-truth mask.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (tp, fp, fn, tn): true/false positive and negative pixel counts.</p>
+<ul>
+<li><strong>pred:</strong>  Boolean array, the predicted mask.</li>
+<li><strong>gt:</strong>  Boolean array of the same shape, the ground-truth mask.</li>
+</ul>
 
-<p>Raises:
-    ValueError: If pred and gt have different shapes.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(tp, fp, fn, tn): true/false positive and negative pixel counts.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If pred and gt have different shapes.</li>
+</ul>
 </div>
 
 
@@ -306,15 +315,24 @@ one-pixel-wide centrelines are, in pixels.</p>
 
             <div class="docstring"><p>Intersection over union, tp / (tp + fp + fn).</p>
 
-<p>Args:
-    pred: Boolean array, the predicted mask.
-    gt: Boolean array of the same shape, the ground-truth mask.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    float in [0, 1]; 1.0 when both masks are empty.</p>
+<ul>
+<li><strong>pred:</strong>  Boolean array, the predicted mask.</li>
+<li><strong>gt:</strong>  Boolean array of the same shape, the ground-truth mask.</li>
+</ul>
 
-<p>Raises:
-    ValueError: If pred and gt have different shapes.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>float in [0, 1]; 1.0 when both masks are empty.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If pred and gt have different shapes.</li>
+</ul>
 </div>
 
 
@@ -351,15 +369,24 @@ one-pixel-wide centrelines are, in pixels.</p>
 
             <div class="docstring"><p>Dice coefficient (equal to pixel F1), 2tp / (2tp + fp + fn).</p>
 
-<p>Args:
-    pred: Boolean array, the predicted mask.
-    gt: Boolean array of the same shape, the ground-truth mask.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    float in [0, 1]; 1.0 when both masks are empty.</p>
+<ul>
+<li><strong>pred:</strong>  Boolean array, the predicted mask.</li>
+<li><strong>gt:</strong>  Boolean array of the same shape, the ground-truth mask.</li>
+</ul>
 
-<p>Raises:
-    ValueError: If pred and gt have different shapes.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>float in [0, 1]; 1.0 when both masks are empty.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If pred and gt have different shapes.</li>
+</ul>
 </div>
 
 
@@ -406,16 +433,25 @@ one-pixel-wide centrelines are, in pixels.</p>
 precision = false obstacles). Recall is the share of true branch pixels
 that were found (low recall = missed obstacles).</p>
 
-<p>Args:
-    pred: Boolean array, the predicted mask.
-    gt: Boolean array of the same shape, the ground-truth mask.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (precision, recall) as floats in [0, 1]; each is 0.0 when its
-    denominator is zero.</p>
+<ul>
+<li><strong>pred:</strong>  Boolean array, the predicted mask.</li>
+<li><strong>gt:</strong>  Boolean array of the same shape, the ground-truth mask.</li>
+</ul>
 
-<p>Raises:
-    ValueError: If pred and gt have different shapes.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(precision, recall) as floats in [0, 1]; each is 0.0 when its
+  denominator is zero.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If pred and gt have different shapes.</li>
+</ul>
 </div>
 
 
@@ -460,12 +496,18 @@ that were found (low recall = missed obstacles).</p>
 other is found with a Euclidean distance transform; the two means are
 averaged.</p>
 
-<p>Args:
-    skel_a: Boolean array, first skeleton.
-    skel_b: Boolean array of the same shape, second skeleton.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    float distance in pixels; <code>inf</code> if either skeleton is empty.</p>
+<ul>
+<li><strong>skel_a:</strong>  Boolean array, first skeleton.</li>
+<li><strong>skel_b:</strong>  Boolean array of the same shape, second skeleton.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>float distance in pixels; <code>inf</code> if either skeleton is empty.</p>
+</blockquote>
 </div>
 
 
@@ -519,17 +561,26 @@ per-pixel visibility labels, <code>visible</code> is approximated by a visible-b
 detector (in <code>train.py</code>, the baseline mask); GT pixels it does not fire on
 count as hidden.</p>
 
-<p>Args:
-    pred: Boolean array, the predicted mask.
-    gt: Boolean array of the same shape, the ground-truth mask.
-    visible: Boolean array of the same shape, True where wood is visible.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    Fraction of hidden GT pixels (<code>gt &amp; ~visible</code>) that <code>pred</code> marks as
-    branch, in [0, 1]; <code>nan</code> if no GT pixel is hidden.</p>
+<ul>
+<li><strong>pred:</strong>  Boolean array, the predicted mask.</li>
+<li><strong>gt:</strong>  Boolean array of the same shape, the ground-truth mask.</li>
+<li><strong>visible:</strong>  Boolean array of the same shape, True where wood is visible.</li>
+</ul>
 
-<p>Raises:
-    ValueError: If the three arrays do not all have the same shape.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Fraction of hidden GT pixels (<code>gt &amp; ~visible</code>) that <code>pred</code> marks as
+  branch, in [0, 1]; <code>nan</code> if no GT pixel is hidden.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If the three arrays do not all have the same shape.</li>
+</ul>
 </div>
 
 

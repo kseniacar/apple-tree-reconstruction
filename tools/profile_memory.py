@@ -19,7 +19,14 @@ from features import downsample, feature_names, pixel_features  # noqa: E402
 
 
 def peak_mb(fn):
-    """Run ``fn`` and return the peak memory it allocated, in MB."""
+    """Run a function and return the peak memory it allocated.
+
+    Args:
+        fn: Function with no arguments.
+
+    Returns:
+        Peak traced allocation in MB.
+    """
     tracemalloc.start()
     fn()
     _, peak = tracemalloc.get_traced_memory()

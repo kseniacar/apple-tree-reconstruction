@@ -139,8 +139,9 @@ FLOPs count only the convolution layers (2 x multiply-accumulates; batch norm, R
 - Run of 2026-10-14 (author's MacBook, `requirements.txt` only): 15 passed, **1 skipped**. The skipped test is `test_unet_output_shape` in `tests/test_train.py`, which calls `pytest.importorskip("torch")` and so is skipped whenever PyTorch is not installed.
 - Re-run of 2026-10-25 (Python 3.10, pinned `requirements-train.txt`, which includes `torch==2.11.0`): 16 passed, 0 skipped.
 - After the `main.py` depth-pairing fix of 2026-10-25, which added `test_main_runs_on_treeid_style_files`: 17 passed, 0 skipped.
-- After adding the occluded recall, alignment check, cross-validation and U-Net cost code (2026-10-25, `tests/test_eval.py`, including end-to-end runs of `train.py` and `crossval.py` on a small synthetic dataset): 24 passed, 0 skipped. This is the run in the committed `doc/test_report.html`.
-- CI installs only `requirements.txt`, so on GitHub Actions the two PyTorch tests are skipped (22 passed, 2 skipped). The test only checks the network's output shape on random input; the U-Net has not been trained or evaluated on the dataset, and no U-Net results are reported here.
+- After adding the occluded recall, alignment check, cross-validation and U-Net cost code (2026-10-25, `tests/test_eval.py`, including end-to-end runs of `train.py` and `crossval.py` on a small synthetic dataset): 24 passed, 0 skipped.
+- After the input checks (missing, duplicate and mismatched depth), the manual-offset summary, the baseline sweep and the `--work-size` file names (2026-10-25): 30 passed, 0 skipped. This is the run in the committed `doc/test_report.html`.
+- CI installs only `requirements.txt`, so on GitHub Actions the two PyTorch tests are skipped (28 passed, 2 skipped; checked locally by hiding PyTorch). The test only checks the network's output shape on random input; the U-Net has not been trained or evaluated on the dataset, and no U-Net results are reported here.
 
 ## 6. Limitations of these results
 

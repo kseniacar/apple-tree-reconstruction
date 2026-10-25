@@ -56,8 +56,11 @@ main    </h1>
 
                         <div class="docstring"><p>Entry point: run the baseline over the dataset and report metrics.</p>
 
-<p>Usage:
-    python src/main.py --config config/default.toml [--data-root PATH]</p>
+<h6 id="usage">Usage:</h6>
+
+<blockquote>
+  <p>python src/main.py --config config/default.toml [--data-root PATH]</p>
+</blockquote>
 </div>
 
                         <input id="mod-main-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
@@ -193,18 +196,27 @@ main    </h1>
 
             <div class="docstring"><p>Run the baseline on one image and score it against the ground truth.</p>
 
-<p>Args:
-    rgb: (H, W, 3) uint8 image.
-    depth: (H, W) uint8 depth image, or None for RGB only.
-    gt: (256, 256) boolean ground-truth mask.
-    params: keyword arguments for <code><a href="baseline.html#predict_mask">baseline.predict_mask</a></code> (the
-        <code>[baseline]</code> section of the config).</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    dict with keys "iou", "dice", "precision", "recall", "chamfer_px".</p>
+<ul>
+<li><strong>rgb:</strong>  (H, W, 3) uint8 image.</li>
+<li><strong>depth:</strong>  (H, W) uint8 depth image, or None for RGB only.</li>
+<li><strong>gt:</strong>  (256, 256) boolean ground-truth mask.</li>
+<li><strong>params:</strong>  keyword arguments for <code><a href="baseline.html#predict_mask">baseline.predict_mask</a></code> (the
+<code>[baseline]</code> section of the config).</li>
+</ul>
 
-<p>Raises:
-    ValueError: If the predicted mask and gt have different shapes.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>dict with keys "iou", "dice", "precision", "recall", "chamfer_px".</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If the predicted mask and gt have different shapes.</li>
+</ul>
 </div>
 
 
@@ -259,11 +271,17 @@ main    </h1>
 
             <div class="docstring"><p>Evaluate the baseline on every image with ground truth and print mean metrics.</p>
 
-<p>Args:
-    argv: Command-line arguments (None reads <code>sys.argv</code>).</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    0 on success, 1 if the data folder does not exist.</p>
+<ul>
+<li><strong>argv:</strong>  Command-line arguments (None reads <code>sys.argv</code>).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>0 on success, 1 if the data folder does not exist.</p>
+</blockquote>
 </div>
 
 

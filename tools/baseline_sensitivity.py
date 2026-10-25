@@ -72,6 +72,7 @@ def main(argv=None):
     split = split_by_tree(pairs, mcfg.get("val_frac", 0.15), mcfg.get("test_frac", 0.15), mcfg.get("seed", 0))
 
     def load(ps):
+        """Read (rgb, depth, gt) arrays for a list of pairs."""
         return [(read_image(r), read_depth(d) if d else None, read_mask(g)) for r, d, g in ps]
 
     val, test = load(split["val"]), load(split["test"])

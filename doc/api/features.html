@@ -225,12 +225,18 @@ features    </h1>
 
             <div class="docstring"><p>Names of the columns returned by <code><a href="#pixel_features">pixel_features</a></code> (same order).</p>
 
-<p>Args:
-    scales: Gaussian sigmas, as passed to <code><a href="#pixel_features">pixel_features</a></code>.
-    position: Whether the row/column features are included.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    list of str, e.g. <code>"g_s6"</code> = green smoothed with sigma 6.</p>
+<ul>
+<li><strong>scales:</strong>  Gaussian sigmas, as passed to <code><a href="#pixel_features">pixel_features</a></code>.</li>
+<li><strong>position:</strong>  Whether the row/column features are included.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>list of str, e.g. <code>"g_s6"</code> = green smoothed with sigma 6.</p>
+</blockquote>
 </div>
 
 
@@ -283,13 +289,19 @@ values Gaussian-smoothed at each scale in <code>scales</code> (local context, wh
 lets a model guess at branches hidden behind leaves), and its normalised
 row/column position.</p>
 
-<p>Args:
-    x: (4, H, W) float array in [0, 1], channels R, G, B, depth.
-    scales: Gaussian sigmas in pixels; 0 means the raw value.
-    position: include the row/column features.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (H * W, F) float32 array, F = 5 * len(scales) (+ 2 with position).</p>
+<ul>
+<li><strong>x:</strong>  (4, H, W) float array in [0, 1], channels R, G, B, depth.</li>
+<li><strong>scales:</strong>  Gaussian sigmas in pixels; 0 means the raw value.</li>
+<li><strong>position:</strong>  include the row/column features.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(H * W, F) float32 array, F = 5 * len(scales) (+ 2 with position).</p>
+</blockquote>
 </div>
 
 
@@ -326,13 +338,19 @@ row/column position.</p>
 
             <div class="docstring"><p>Resize an input (bilinear) and its mask (nearest neighbour) to <code>size</code>.</p>
 
-<p>Args:
-    x: (C, H, W) float array.
-    y: (H, W) boolean mask.
-    size: Target side length in pixels.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (xs, ys): (C, size, size) float32 array and (size, size) boolean mask.</p>
+<ul>
+<li><strong>x:</strong>  (C, H, W) float array.</li>
+<li><strong>y:</strong>  (H, W) boolean mask.</li>
+<li><strong>size:</strong>  Target side length in pixels.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(xs, ys): (C, size, size) float32 array and (size, size) boolean mask.</p>
+</blockquote>
 </div>
 
 
@@ -379,14 +397,20 @@ row/column position.</p>
 <p>Branch pixels are rare (a few percent of the image), so without balancing
 a model can score well by predicting "no branch" everywhere.</p>
 
-<p>Args:
-    feats: (H * W, F) features from <code><a href="#pixel_features">pixel_features</a></code>.
-    y: (H, W) boolean mask.
-    n_per_class: Pixels to draw from each class (fewer if not available).
-    rng: <code>numpy.random.Generator</code>.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (X, t): features and 0/1 targets of the chosen pixels.</p>
+<ul>
+<li><strong>feats:</strong>  (H * W, F) features from <code><a href="#pixel_features">pixel_features</a></code>.</li>
+<li><strong>y:</strong>  (H, W) boolean mask.</li>
+<li><strong>n_per_class:</strong>  Pixels to draw from each class (fewer if not available).</li>
+<li><strong>rng:</strong>  <code>numpy.random.Generator</code>.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(X, t): features and 0/1 targets of the chosen pixels.</p>
+</blockquote>
 </div>
 
 
@@ -420,12 +444,18 @@ a model can score well by predicting "no branch" everywhere.</p>
 
             <div class="docstring"><p>Bilinear interpolation of a probability map up to (size, size).</p>
 
-<p>Args:
-    prob: (h, w) float array.
-    size: Target side length in pixels.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (size, size) float array.</p>
+<ul>
+<li><strong>prob:</strong>  (h, w) float array.</li>
+<li><strong>size:</strong>  Target side length in pixels.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(size, size) float array.</p>
+</blockquote>
 </div>
 
 

@@ -69,14 +69,20 @@ meant for ranking the models, not as the final accuracy. The shape prior (the
 mean training mask, no image input) is cross-validated the same way, as the
 reference any model has to beat.</p>
 
-<p>Usage:
-    python src/crossval.py                       # all models, k from config/default.toml [eval]
-    python src/crossval.py --models prior tree mlp -k 5
-    python src/crossval.py --limit 60            # quick check</p>
+<h6 id="usage">Usage:</h6>
 
-<p>Outputs:
-    res/cv_folds.csv     validation Dice and threshold per model and fold
-    res/cv_summary.csv   mean and standard deviation of the fold Dice per model</p>
+<blockquote>
+  <p>python src/crossval.py                       # all models, k from config/default.toml [eval]
+  python src/crossval.py --models prior tree mlp -k 5
+  python src/crossval.py --limit 60            # quick check</p>
+</blockquote>
+
+<h6 id="outputs">Outputs:</h6>
+
+<blockquote>
+  <p>res/cv_folds.csv     validation Dice and threshold per model and fold
+  res/cv_summary.csv   mean and standard deviation of the fold Dice per model</p>
+</blockquote>
 </div>
 
                         <input id="mod-crossval-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
@@ -277,16 +283,25 @@ reference any model has to beat.</p>
 
             <div class="docstring"><p>Split samples into k folds so that each tree is in exactly one fold.</p>
 
-<p>Args:
-    pairs: List of <code>(rgb_path, depth_path_or_None, gt_path)</code> tuples.
-    k: Number of folds.
-    seed: Seed for the random shuffle of tree IDs.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    List of k <code>(train_pairs, val_pairs)</code> tuples.</p>
+<ul>
+<li><strong>pairs:</strong>  List of <code>(rgb_path, depth_path_or_None, gt_path)</code> tuples.</li>
+<li><strong>k:</strong>  Number of folds.</li>
+<li><strong>seed:</strong>  Seed for the random shuffle of tree IDs.</li>
+</ul>
 
-<p>Raises:
-    ValueError: If there are fewer distinct trees than folds.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>List of k <code>(train_pairs, val_pairs)</code> tuples.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If there are fewer distinct trees than folds.</li>
+</ul>
 </div>
 
 
@@ -387,11 +402,17 @@ reference any model has to beat.</p>
 
             <div class="docstring"><p>Run k-fold cross-validation of the chosen models on the non-test trees.</p>
 
-<p>Args:
-    argv: Command-line arguments; <code>None</code> uses <code>sys.argv</code>.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    Exit code: 0 on success, 1 if the data folder is missing or too small.</p>
+<ul>
+<li><strong>argv:</strong>  Command-line arguments; <code>None</code> uses <code>sys.argv</code>.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Exit code: 0 on success, 1 if the data folder is missing or too small.</p>
+</blockquote>
 </div>
 
 
