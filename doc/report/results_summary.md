@@ -48,7 +48,13 @@ The 64 x 64 run had fewer training pixels (307,344) because some images have few
 
 ## 5. Tests
 
-`bash tools/run_tests.sh`: 15 passed, 1 skipped (U-Net test, PyTorch not installed). Report: `doc/test_report.html`.
+- Run of 2026-10-14 (author's MacBook, `requirements.txt` only): 15 passed, **1 skipped**. The skipped test is `test_unet_output_shape` in `tests/test_train.py`, which calls `pytest.importorskip("torch")` and so is skipped whenever PyTorch is not installed.
+- Re-run of 2026-10-25 (Python 3.10, pinned `requirements-train.txt`, which includes `torch==2.11.0`): 16 passed, 0 skipped. This is the run in the committed `doc/test_report.html`.
+- CI installs only `requirements.txt`, so on GitHub Actions the U-Net test is still skipped (15 passed, 1 skipped). The test only checks the network's output shape on random input; the U-Net has not been trained or evaluated on the dataset, and no U-Net results are reported here.
+
+## 6. Limitations of these results
+
+- **Single seed.** Every number above comes from one run with `seed = 0` (`config/default.toml`), which fixes the train / validation / test split by tree, the pixel sampling and the model initialisation (`random_state` for the decision tree and MLP). No repeats with other seeds were run, so there are no standard deviations or confidence intervals. Differences smaller than a few hundredths of Dice (for example MLP 0.369 vs tree 0.358, or RGB-D vs RGB only) may not be real. To check, re-run `src/train.py` with several values of `seed` and report the mean and spread.
 
 ## Points to interpret in the report
 
