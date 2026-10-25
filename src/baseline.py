@@ -56,7 +56,12 @@ def predict_mask(rgb, depth=None, exg_threshold=0.05, depth_min=1, depth_max=255
 
     Returns:
         (out_size, out_size) boolean mask.
+
+    Raises:
+        ValueError: If depth is given and is not the same size as rgb.
     """
+    if depth is not None and depth.shape != rgb.shape[:2]:
+        raise ValueError(f"depth {depth.shape} does not match RGB {rgb.shape[:2]}")
     mask = excess_green(rgb) < exg_threshold
     if depth is not None:
         mask &= (depth >= depth_min) & (depth <= depth_max)

@@ -59,7 +59,7 @@ def _synthetic_dataset(folder, n_trees=10):
     for i in range(n_trees):
         col = 300 + int(rng.integers(-20, 20))
         rgb = np.zeros((480, 640, 3), np.uint8); rgb[...] = (30, 160, 30); rgb[:, col:col + 20] = (120, 80, 40)
-        depth = np.full((480, 640), 100, np.uint8)
+        depth = np.full((480, 640), 100 + i, np.uint8)   # distinct per tree, or the duplicate-depth check drops them
         gt = np.zeros((256, 256), np.uint8)
         c = (col - 80) * 256 // 480
         gt[:, c:c + 11] = 255

@@ -67,3 +67,32 @@ def test_best_threshold_and_tree_learns_simple_mask():
     prob = model.predict(pixel_features(x)).reshape(32, 32)
     thr, d = best_threshold([prob], [y])
     assert d > 0.95 and 0.1 <= thr <= 0.9
+
+
+def test_find_pairs_handles_missing_and_duplicate_depth(tmp_path):
+    _write_sample(tmp_path, "R01N01")
+    _write_sample(tmp_path, "R01N02")                # same depth bytes as R01N01: a duplicate
+    _write_sample(tmp_path, "R01N03")
+    Image.fromarray(np.full((480, 640), 7, np.uint8)).save(tmp_path / "R01N03_Summer_D-12-40-50.png")
+    _write_sample(tmp_path, "R01N04")
+    (tmp_path / "R01N04_Summer_D-12-40-50.png").unlink()
+    with pytest.warns(UserWarning) as record:
+        pairs = find_pairs(tmp_path, "Summer")
+    messages = " ".join(str(w.message) for w in record)
+    assert "R01N04" in messages and "RGB only" in messages and "dropping 2 images" in messages
+    assert [tree_id(p[0]) for p in pairs] == ["R01N03", "R01N04"]
+    assert pairs[1][1] is None
+
+
+def test_load_sample_rejects_depth_size_mismatch(tmp_path):
+    _write_sample(tmp_path, "R01N01")
+    Image.fromarray(np.zeros((240, 320), np.uint8)).save(tmp_path / "R01N01_Summer_D-12-40-50.png")
+    pair = find_pairs(tmp_path, "Summer")[0]
+    with pytest.raises(ValueError, match="does not match"):
+        load_sample(*pair)
+
+
+def test_predict_mask_rejects_depth_size_mismatch():
+    from baseline import predict_mask
+    with pytest.raises(ValueError, match="does not match"):
+        predict_mask(np.zeros((480, 640, 3), np.uint8), np.zeros((240, 320), np.uint8))
