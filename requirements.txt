@@ -1,11 +1,12 @@
-# Pinned versions, tested with Python 3.11 (CI) on 2026-10-25.
-numpy==2.4.6
-scipy==1.17.1
-scikit-image==0.26.0
-scikit-learn==1.9.1
+# Pinned versions, tested on 2026-10-25. Work on Python 3.10 to 3.13.
+numpy==2.2.6
+scipy==1.15.3
+scikit-image==0.25.2
+scikit-learn==1.7.2
 joblib==1.6.0
-pillow==13.0.0
-matplotlib==3.11.2
+pillow==12.3.0
+matplotlib==3.10.9
 pytest==9.1.1
 pytest-html==4.2.0
 pdoc==16.0.0
+tomli==2.3.0; python_version < "3.11"

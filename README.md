@@ -26,7 +26,7 @@ Dataset reference: Chen et al. (2020), arXiv:2010.06879.
 
 ## Quick start
 
-Needs Python 3.11 or newer (Colab is fine). Dependency versions are pinned in `requirements.txt` and `requirements-train.txt`.
+Needs Python 3.10 or newer (Colab is fine). Dependency versions are pinned in `requirements.txt` and `requirements-train.txt`.
 
 ```bash
 pip install -r requirements.txt
