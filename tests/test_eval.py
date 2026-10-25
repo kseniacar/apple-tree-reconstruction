@@ -113,3 +113,14 @@ def test_gt_offset_manual_summary(tmp_path):
     assert s["median_abs_dx"] == 15 and s["share_abs_ge_15"] == 0.5 and (s["min_dx"], s["max_dx"]) == (-10, 20)
     f.write_text("image,visible_trunk_col,gt_trunk_col,dx,note\na,,,,\n")
     assert summarise_manual(f) is None
+
+
+def test_baseline_sensitivity_evaluate_scores_known_case():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    from baseline_sensitivity import evaluate
+    rgb = np.zeros((480, 640, 3), np.uint8); rgb[...] = (30, 160, 30); rgb[:, 310:330] = (120, 80, 40)
+    gt = np.zeros((256, 256), bool); gt[:, 123:134] = True
+    r = evaluate([(rgb, None, gt)], dict(exg_threshold=0.05, depth_min=1, depth_max=255, closing_radius=0))
+    assert r["recall"] > 0.9 and r["precision"] > 0.9 and r["dice"] > 0.9
