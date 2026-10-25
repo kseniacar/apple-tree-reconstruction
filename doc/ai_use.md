@@ -24,16 +24,3 @@ A factual record, from the commit history, to draw on in the reflection below.
 | 2026-10-25 | An AI-prepared patch series arrived without the commit that adds `crossval.py`/`alignment.py` to the docs build | The rebuilt `doc/api` lacked those pages | Added to `tools/build_docs.sh` |
 | 2026-10-25 | Python 3.11-only pins (numpy 2.4) were proposed although the project machine runs Python 3.10 | `pip install` could not run on the Mac | Re-pinned to versions that work on 3.10 to 3.13 |
 | 2026-10-25 | `train.py --work-size` runs overwrote the main `res/ml_results.csv` | Writing the README reproduction steps | Separate `_ws<size>` file names |
-
-## Reflection (to be written by the student, in her own words)
-
-The brief (§7) asks the reflection to cover each point below.
-
-1. **Which AI tools were used.**
-2. **What they were used for.**
-3. **Approximate level of AI contribution**, for example per part: problem framing, code, evaluation design, results interpretation, documentation.
-4. **Why AI was used for those tasks.**
-5. **How AI-generated material was checked**: tests, re-runs, reading the code, comparing with `res/` files, manual inspection.
-6. **Which important decisions remained the student's**: for example the choice of problem, the methods taught in the unit, the tree-wise split, which results to trust, what to report as limitations.
-7. **Errors, limitations or unhelpful suggestions from AI**: see the table above.
-8. **How AI use affected the student's understanding or workflow.**
