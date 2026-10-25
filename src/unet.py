@@ -44,3 +44,41 @@ class UNet(nn.Module):
 def count_parameters(model):
     """Number of trainable parameters."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def count_flops(model, input_shape):
+    """Estimate the floating-point operations of one forward pass.
+
+    Counts the multiply-accumulates (MACs) of every ``Conv2d`` and
+    ``ConvTranspose2d`` layer with forward hooks and reports FLOPs = 2 x MACs.
+    Batch norm, ReLU, pooling and concatenation are left out; they are a few
+    percent of the total for this network. The total size of the layer outputs
+    is also returned, for a rough arithmetic-intensity estimate.
+
+    Args:
+        model: A ``torch.nn.Module`` such as ``UNet``.
+        input_shape: Shape of one input batch, e.g. ``(1, 4, 256, 256)``.
+
+    Returns:
+        Tuple ``(flops, activations)``: FLOPs of the convolution layers and the
+        number of values in their outputs, for the whole batch.
+    """
+    totals = {"macs": 0, "acts": 0}
+
+    def hook(layer, inputs, output):
+        k = layer.kernel_size[0] * layer.kernel_size[1] * layer.in_channels // layer.groups
+        if isinstance(layer, nn.ConvTranspose2d):
+            # every input value is multiplied by every output channel's kernel
+            totals["macs"] += inputs[0].numel() * layer.out_channels * k // layer.in_channels
+        else:
+            totals["macs"] += output.numel() * k
+        totals["acts"] += output.numel()
+
+    handles = [m.register_forward_hook(hook) for m in model.modules()
+               if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d))]
+    model.eval()
+    with torch.no_grad():
+        model(torch.zeros(input_shape))
+    for h in handles:
+        h.remove()
+    return 2 * totals["macs"], totals["acts"]
