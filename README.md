@@ -58,7 +58,21 @@ python src/train.py --no-position       # without row/column features: do models
 
 Images are split by tree into train / validation / test. The validation trees set each model's threshold; the test trees are only used for the final comparison with the baseline. Trained models go to `outputs/` (not committed); results, example images and decision-tree feature importance go to `res/`.
 
-Optional extension: `src/train_unet.py` trains a U-Net (needs `pip install -r requirements-train.txt`).
+Each `train.py` run also reports:
+
+- **Occluded-branch recall** (`occ_recall` in `res/ml_results.csv`): recall on the ground-truth pixels that the visible-bark detector (the baseline) misses, which tests whether a method finds hidden branches.
+- **GT alignment check**: the shift between each test mask and the visible wood (`res/gt_offsets.csv`), and all metrics again against the shifted masks (`res/ml_results_aligned.csv`).
+
+## Model selection and cost
+
+```bash
+python src/crossval.py                  # 5-fold cross-validation by tree on the non-test trees
+python tools/profile_baseline.py        # where the baseline spends its time (cProfile)
+python tools/profile_memory.py          # peak memory per image and feature-matrix sizes (no dataset needed)
+python tools/unet_cost.py               # U-Net parameters, FLOPs and arithmetic intensity (needs PyTorch, no dataset)
+```
+
+Future work: `src/train_unet.py` trains a U-Net (needs `pip install -r requirements-train.txt`). It has not been trained or evaluated yet, so no U-Net accuracy is reported; `tools/unet_cost.py` gives its cost.
 
 ## Documentation
 

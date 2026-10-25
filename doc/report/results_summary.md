@@ -61,16 +61,44 @@ Source: `res/ml_results_nopos.csv`. With position features, the decision tree gi
 | of which `excess_green` | 0.079 | 19% |
 | of which `binary_closing` | 0.047 | 11% |
 
+## 4b. Memory (`python tools/profile_memory.py`, synthetic 640 x 480 RGB-D, run 2026-10-25)
+
+| Step | Peak memory |
+|---|---|
+| Baseline `predict_mask` + skeleton, one image | 19.7 MB |
+| Per-pixel features, one image at 64 x 64 / 128 x 128 / 256 x 256 | 1.2 / 4.9 / 18.4 MB |
+
+`src/train.py` keeps every image's feature matrix in memory: 17 float32 features per pixel is 0.28 / 1.11 / 4.46 MB per image at 64 / 128 / 256, so 0.15 / 0.60 / 2.41 GB for all 541 images, plus 0.57 GB for the (4, 256, 256) inputs. The sampled training set itself is small (379 images x 1,000 pixels x 17 features = 25.8 MB). Memory, not compute, is what limits running at 256 x 256 on a free Colab instance; 64 x 64 needs about 16x less with the same Dice (section 2). These are `tracemalloc` peaks of Python/NumPy allocations, not whole-process memory.
+
+## 4c. U-Net cost (`python tools/unet_cost.py`, input 1 x 4 x 256 x 256, run 2026-10-25)
+
+| Base channels | Levels | Parameters | GFLOPs per image | Weights (MB) | Layer outputs (MB) | FLOP / byte |
+|---|---|---|---|---|---|---|
+| 8 | 4 | 486,625 | 1.54 | 1.95 | 20.2 | 69.6 |
+| 16 | 3 | 482,881 | 4.66 | 1.93 | 38.0 | 116.6 |
+| **16** | **4** | **1,942,721** | **6.08** | **7.77** | **40.1** | **127.1** (configured) |
+| 32 | 4 | 7,763,329 | 24.18 | 31.05 | 80.0 | 217.8 |
+
+FLOPs count only the convolution layers (2 x multiply-accumulates; batch norm, ReLU and pooling add a few percent). FLOP / byte assumes each weight and layer output is moved once; at over 100 FLOP/byte the network is compute-bound on a CPU or GPU, so runtime should scale with GFLOPs. Doubling the width roughly quadruples the FLOPs and parameters. For comparison, the decision tree predicts an image in 0.002 s on a laptop CPU (section 1). The U-Net has not been trained, so these are costs only, with no accuracy attached.
+
 ## 5. Tests
 
 - Run of 2026-10-14 (author's MacBook, `requirements.txt` only): 15 passed, **1 skipped**. The skipped test is `test_unet_output_shape` in `tests/test_train.py`, which calls `pytest.importorskip("torch")` and so is skipped whenever PyTorch is not installed.
 - Re-run of 2026-10-25 (Python 3.10, pinned `requirements-train.txt`, which includes `torch==2.11.0`): 16 passed, 0 skipped.
-- After the `main.py` depth-pairing fix of 2026-10-25, which added `test_main_runs_on_treeid_style_files`: 17 passed, 0 skipped. This is the run in the committed `doc/test_report.html`.
-- CI installs only `requirements.txt`, so on GitHub Actions the U-Net test is still skipped (16 passed, 1 skipped). The test only checks the network's output shape on random input; the U-Net has not been trained or evaluated on the dataset, and no U-Net results are reported here.
+- After the `main.py` depth-pairing fix of 2026-10-25, which added `test_main_runs_on_treeid_style_files`: 17 passed, 0 skipped.
+- After adding the occluded recall, alignment check, cross-validation and U-Net cost code (2026-10-25, `tests/test_eval.py`, including end-to-end runs of `train.py` and `crossval.py` on a small synthetic dataset): 24 passed, 0 skipped. This is the run in the committed `doc/test_report.html`.
+- CI installs only `requirements.txt`, so on GitHub Actions the two PyTorch tests are skipped (22 passed, 2 skipped). The test only checks the network's output shape on random input; the U-Net has not been trained or evaluated on the dataset, and no U-Net results are reported here.
 
 ## 6. Limitations of these results
 
 - **Single seed.** Every number above comes from one run with `seed = 0` (`config/default.toml`), which fixes the train / validation / test split by tree, the pixel sampling and the model initialisation (`random_state` for the decision tree and MLP). No repeats with other seeds were run, so there are no standard deviations or confidence intervals. Differences smaller than a few hundredths of Dice (for example MLP 0.369 vs tree 0.358, or RGB-D vs RGB only) may not be real. To check, re-run `src/train.py` with several values of `seed` and report the mean and spread.
+
+- **Not yet run on the dataset (code is in the repository, results pending).** The numbers above predate these additions, so they still need a run on Colab with the dataset:
+  - **k-fold cross-validation by tree** (`python src/crossval.py`, 5 folds of the non-test trees): mean and spread of validation Dice per model, to check whether the model ranking holds beyond one validation split.
+  - **Occluded-branch recall** (`occ_recall` column, new in `python src/train.py`): hidden GT pixels are approximated as those the baseline does not detect, so the baseline scores 0 by construction and the metric is only as good as that approximation.
+  - **GT offset check** (`res/gt_offsets.csv`, `res/ml_results_aligned.csv`, from `python src/train.py`): the offset is measured against the baseline mask, so aligned scores favour the baseline; they show how much the reported offset could matter, not the true error.
+- **Not done, out of scope for this submission:** autumn and winter images (robustness to leaf cover), lifting the skeleton to 3D with depth (no 3D ground truth to validate against), the duplicate-depth hash check (row R04 is excluded by name in `config/default.toml` instead), and the baseline threshold sensitivity study.
+- **U-Net: future work.** `src/train_unet.py` and `src/unet.py` are implemented and tested for output shape, and their cost is in section 4c, but the network has not been trained or evaluated. No U-Net accuracy is claimed.
 
 ## Points to interpret in the report
 
