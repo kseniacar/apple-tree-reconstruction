@@ -145,7 +145,16 @@ def score(pred, gt, visible=None):
 
 
 def mean_scores(rows):
-    """Average each metric over a list of ``score`` dicts, ignoring NaNs."""
+    """Average each metric over a list of ``score`` dicts, ignoring NaNs.
+
+    NaN appears for ``occ_recall`` on images with no hidden GT pixels.
+
+    Args:
+        rows: Non-empty list of dicts with the same keys.
+
+    Returns:
+        dict of the per-key means.
+    """
     return {k: float(np.nanmean([r[k] for r in rows])) for k in rows[0]}
 
 

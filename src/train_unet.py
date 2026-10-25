@@ -1,4 +1,8 @@
-"""Optional extension: train a U-Net (convolutional network) and compare it with the baseline.
+"""Future work: train a U-Net (convolutional network) and compare it with the baseline.
+
+Status: implemented and unit-tested (output shape, FLOP count) but NOT yet
+trained or evaluated on the dataset, so no U-Net accuracy is reported anywhere
+in this repository. Its cost is reported by tools/unet_cost.py.
 
 The main method is in train.py (regression models taught in the unit). This
 script is an extra comparison and needs PyTorch (requirements-train.txt).
@@ -29,15 +33,24 @@ import numpy as np  # noqa: E402
 import torch  # noqa: E402
 import torch.nn.functional as F  # noqa: E402
 
-from baseline import mask_to_skeleton, predict_mask  # noqa: E402
+from baseline import predict_mask  # noqa: E402
 from dataset import find_pairs, load_sample, split_by_tree  # noqa: E402
-from metrics import chamfer_distance, dice, iou, precision_recall  # noqa: E402
+from metrics import dice  # noqa: E402
+from train import mean_scores, score  # noqa: E402
 from unet import UNet, count_parameters  # noqa: E402
-from utils import load_config, read_image, read_mask  # noqa: E402
+from utils import load_config, read_depth, read_image, read_mask  # noqa: E402
 
 
 def pick_device(name="auto"):
-    """GPU if there is one (CUDA on Colab, MPS on Apple silicon), else CPU."""
+    """Choose the device to train on.
+
+    Args:
+        name: "auto" (GPU if there is one: CUDA on Colab, MPS on Apple
+            silicon; otherwise CPU), or an explicit "cpu", "mps" or "cuda".
+
+    Returns:
+        ``torch.device``.
+    """
     if name != "auto":
         return torch.device(name)
     if torch.cuda.is_available():
@@ -48,7 +61,18 @@ def pick_device(name="auto"):
 
 
 def load_split(pairs, size, use_depth):
-    """Load samples into memory as (N, C, H, W) inputs and (N, H, W) masks."""
+    """Load samples into memory for training.
+
+    Stored as float16 to halve memory; batches are converted to float32 on use.
+
+    Args:
+        pairs: List of ``(rgb_path, depth_path, gt_path)``.
+        size: Side length the samples are resized to.
+        use_depth: If False, only the three RGB channels are kept.
+
+    Returns:
+        (x, y): (N, C, size, size) inputs and (N, size, size) masks, float16.
+    """
     xs, ys = [], []
     for i, p in enumerate(pairs, 1):
         x, y = load_sample(*p, size=size)
@@ -60,7 +84,18 @@ def load_split(pairs, size, use_depth):
 
 
 def augment(x, y):
-    """Random horizontal flip and brightness change, applied per batch."""
+    """Random horizontal flip and brightness change, applied per batch.
+
+    Trees are roughly left-right symmetric and lighting varies between
+    captures, so both keep the labels valid. Depth is not scaled.
+
+    Args:
+        x: (B, C, H, W) input batch in [0, 1].
+        y: (B, 1, H, W) target batch.
+
+    Returns:
+        (x, y) augmented copies.
+    """
     if torch.rand(1).item() < 0.5:
         x, y = x.flip(-1), y.flip(-1)
     gain = 0.8 + 0.4 * torch.rand(x.shape[0], 1, 1, 1, device=x.device)
@@ -70,7 +105,19 @@ def augment(x, y):
 
 
 def loss_fn(logits, y):
-    """Binary cross-entropy plus soft Dice loss (handles thin, sparse branches)."""
+    """Binary cross-entropy plus soft Dice loss.
+
+    Branch pixels are only a few percent of the image; BCE alone lets the
+    network predict "no branch" everywhere, while the Dice term rewards
+    overlap on the thin branches.
+
+    Args:
+        logits: (B, 1, H, W) raw network outputs.
+        y: (B, 1, H, W) targets in {0, 1}.
+
+    Returns:
+        Scalar loss tensor.
+    """
     bce = F.binary_cross_entropy_with_logits(logits, y)
     p = torch.sigmoid(logits)
     inter = (p * y).sum((1, 2, 3))
@@ -80,7 +127,17 @@ def loss_fn(logits, y):
 
 @torch.no_grad()
 def predict(model, x, device, batch_size=8):
-    """Boolean masks (N, H, W) for inputs x (N, C, H, W)."""
+    """Predict boolean masks, thresholding the sigmoid output at 0.5.
+
+    Args:
+        model: Trained ``UNet``.
+        x: (N, C, H, W) inputs.
+        device: ``torch.device`` to run on.
+        batch_size: Images per forward pass.
+
+    Returns:
+        (N, H, W) boolean array.
+    """
     model.eval()
     out = []
     for i in range(0, len(x), batch_size):
@@ -89,18 +146,16 @@ def predict(model, x, device, batch_size=8):
     return np.concatenate(out)
 
 
-def score(pred, gt):
-    """Metrics for one predicted mask against ground truth."""
-    p, r = precision_recall(pred, gt)
-    return {"iou": iou(pred, gt), "dice": dice(pred, gt), "precision": p, "recall": r,
-            "chamfer_px": chamfer_distance(mask_to_skeleton(pred), mask_to_skeleton(gt))}
-
-
-def mean_scores(rows):
-    return {k: float(np.mean([r[k] for r in rows])) for k in rows[0]}
-
-
 def main(argv=None):
+    """Train the U-Net, keep the best checkpoint by validation Dice and compare it with the baseline.
+
+    Args:
+        argv: Command-line arguments (None reads ``sys.argv``).
+
+    Returns:
+        0 on success, 1 if the data folder is missing or has fewer than 3
+        images with ground truth.
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", default="config/default.toml")
     parser.add_argument("--data-root", default=None)
@@ -201,9 +256,7 @@ def main(argv=None):
     base_rows, unet_rows, base_preds = [], [], []
     t0 = time.perf_counter()
     for (rgb_p, d_p, gt_p), up in zip(split["test"], unet_pred):
-        depth = read_image(d_p) if d_p is not None else None
-        if depth is not None and depth.ndim == 3:
-            depth = depth[..., 0]
+        depth = read_depth(d_p) if d_p is not None else None
         bp = predict_mask(read_image(rgb_p), depth if use_depth else None, **cfg["baseline"])
         gt = read_mask(gt_p)
         base_preds.append(bp)
