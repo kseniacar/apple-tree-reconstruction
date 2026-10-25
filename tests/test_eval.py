@@ -99,3 +99,17 @@ def test_unet_flops_match_hand_count():
     up = torch.nn.ConvTranspose2d(8, 4, 2, stride=2)
     flops, _ = count_flops(torch.nn.Sequential(up), (1, 8, 16, 16))
     assert flops == 2 * (8 * 16 * 16) * 4 * 2 * 2
+
+
+def test_gt_offset_manual_summary(tmp_path):
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    from gt_offset import summarise_manual
+    f = tmp_path / "m.csv"
+    f.write_text("image,visible_trunk_col,gt_trunk_col,dx,note\na,100,120,20,\nb,100,90,-10,\nc,,,,hidden\n")
+    s = summarise_manual(f)
+    assert s["images"] == 3 and s["readable"] == 2
+    assert s["median_abs_dx"] == 15 and s["share_abs_ge_15"] == 0.5 and (s["min_dx"], s["max_dx"]) == (-10, 20)
+    f.write_text("image,visible_trunk_col,gt_trunk_col,dx,note\na,,,,\n")
+    assert summarise_manual(f) is None
