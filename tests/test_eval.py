@@ -124,3 +124,16 @@ def test_baseline_sensitivity_evaluate_scores_known_case():
     gt = np.zeros((256, 256), bool); gt[:, 123:134] = True
     r = evaluate([(rgb, None, gt)], dict(exg_threshold=0.05, depth_min=1, depth_max=255, closing_radius=0))
     assert r["recall"] > 0.9 and r["precision"] > 0.9 and r["dice"] > 0.9
+
+
+def test_train_work_size_run_does_not_overwrite_main_results(tmp_path):
+    from train import main as train_main
+    data, res = tmp_path / "data", tmp_path / "res"
+    data.mkdir()
+    _synthetic_dataset(data)
+    cfg = tmp_path / "c.toml"
+    cfg.write_text('data_root = "x"\nseason = "Summer"\n[baseline]\n[ml]\nwork_size = 32\npixels_per_class = 50\n')
+    common = ["--config", str(cfg), "--data-root", str(data), "--res", str(res), "--out", str(tmp_path / "o"),
+              "--models", "linear"]
+    assert train_main(common + ["--work-size", "16"]) == 0
+    assert (res / "ml_results_ws16.csv").exists() and not (res / "ml_results.csv").exists()

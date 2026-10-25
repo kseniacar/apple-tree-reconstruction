@@ -52,6 +52,18 @@ The learned models recover about half of these pixels (0.48 to 0.55), but so doe
 
 Moving the GT onto the visible wood helps the baseline and lowers the prior and the learned models by about 0.05 to 0.07 Dice. The models were trained on the offset masks, so they reproduce where the annotators drew the branches, offset included. The shift is estimated against the baseline's own mask, so the aligned scores favour the baseline; they show how much the offset matters, not the true error. The offset also limits how small the Chamfer distance can meaningfully get: a trunk offset of 13-17 px on its own gives a skeleton distance of that order, so much of the 10-12 px reached by the best methods may be annotation offset rather than model error.
 
+## 1d. Failure modes (`python tools/failure_cases.py`)
+
+Per-image Dice of the decision tree on the 81 test images (`res/per_image_scores.csv`; the means match section 1 exactly): minimum 0.06, quartiles 0.30 / 0.37 / 0.43, maximum 0.53. The tree beats the shape prior on only 42% of test images.
+
+`res/failure_cases.png` shows the 3 worst and 3 best cases. The tree outputs nearly the same blocky, centred "Y" (trunk in the middle, two leaders) on every image. It does best when the real tree is centred with a standard V shape. It fails when:
+
+- **the tree is not where the average tree is:** the GT trunk is off centre or the crotch is higher or lower than usual (for example R02N42, R15N20, R16N23);
+- **the GT offset is large:** mean Dice 0.33 for images with |offset| ≥ 20 px (35 images) against 0.38 for |offset| < 10 px (26 images); correlation between Dice and |offset| is -0.34;
+- **the leaders are hidden by dense foliage:** away from the trunk the predictions are scattered blobs rather than continuous branches.
+
+Unsupported inputs and how the code handles them: a missing data folder exits with a message (exit code 1); a missing depth file gives a warning and RGB-only processing; a duplicated depth file drops the image with a warning; a depth image of a different size from the RGB raises `ValueError`; a prediction and GT of different sizes raise `ValueError` in the metrics. These cases are covered by tests in `tests/`. Images framed differently from TreeID (tree not centred) are not rejected, but the results above show the learned models will do badly on them.
+
 ## 2. Sensitivity: working resolution (decision tree and MLP, RGB-D)
 
 | Working size | Model | Dice | Chamfer (px) | Fit time (s) | Time per image (s) |
@@ -132,6 +144,7 @@ FLOPs count only the convolution layers (2 x multiply-accumulates; batch norm, R
 
 ## 6. Limitations of these results
 
+- **Duplicate depth images.** `dataset.find_pairs` drops any image whose depth file is byte-identical to another's (MD5 check). No summer depth file is duplicated. The 6 duplicated winter depth hashes are all in row R04, which is also excluded by name (`exclude_rows` in `config/default.toml`).
 - **One test split.** The test-set numbers come from one split with `seed = 0` (`config/default.toml`). The 5-fold cross-validation (section 1a) gives the spread over validation folds (about 0.01 Dice), but the held-out test set was evaluated once, with no confidence interval. Differences smaller than about 0.01-0.02 Dice (for example MLP vs tree, or RGB-D vs RGB only) should not be read as real.
 
 - **Occluded recall is a proxy.** "Hidden" means "missed by the baseline's visible-bark detector", not a labelled leaf-occlusion mask. The baseline scores 0 by construction, and the metric also counts wood missed for other reasons (shade, GT offset).
@@ -140,9 +153,24 @@ FLOPs count only the convolution layers (2 x multiply-accumulates; batch norm, R
   - **Robustness to leaf cover:** the dataset has summer and winter images only (no autumn), and only summer has GT masks.
   - **3D skeleton:** the skeleton is not lifted to 3D with depth, and the winter depth-consistency check was not run. There is no 3D ground truth to validate against, and the 8-bit depth has unknown scale.
   - **Junction-count error:** not computed for the skeletons.
-  - **Duplicate-depth check:** row R04 is excluded by name in `config/default.toml` instead of a hash check.
 - **U-Net: future work.** `src/train_unet.py` and `src/unet.py` are implemented and tested for output shape, and their cost is in section 4c, but the network has not been trained or evaluated. No U-Net accuracy is claimed. Section 1 suggests any future method should be compared with the shape prior, not only the baseline.
-- **U-Net: future work.** `src/train_unet.py` and `src/unet.py` are implemented and tested for output shape, and their cost is in section 4c, but the network has not been trained or evaluated. No U-Net accuracy is claimed.
+
+## 7. Selected method and why
+
+| Criterion | Baseline | Shape prior | Decision tree | MLP | Evidence |
+|---|---|---|---|---|---|
+| Accuracy, test Dice | 0.149 | 0.377 | 0.358 | 0.369 | Section 1 |
+| Accuracy, 5-fold CV Dice | n/a | 0.379 ± 0.013 | 0.366 ± 0.007 | 0.373 ± 0.014 | Section 1a |
+| Hidden-wood recall | 0 | 0.49 | 0.48 | 0.55 | Section 1b |
+| Runtime, s per image | 0.025 | ≈ 0 | 0.002 | 0.003 | Section 1 |
+| Training time, s | 0 | 0 | 6 | 55 | Section 1 |
+| Memory | 20 MB per image | one 256 x 256 mask | 760 MB whole run at 128 x 128 | same | Sections 4b, 1 |
+| Robustness | fixed thresholds; tuning helps little | same mask for every tree | spread 0.007 over folds; fails off-centre | spread 0.014 | Sections 1a, 1d, 3c |
+| Interpretability | high | high | feature importance | low | `res/tree_feature_importance.csv` |
+
+**Scalability.** Prediction cost grows with the number of pixels. Going from 64 x 64 to 256 x 256 raises the tree's time per image from 0.001 to 0.006 s and its feature memory 16x (0.15 to 2.41 GB for all 541 images), with no gain in Dice (section 2). SVR training cost grows roughly with n² in the number of training pixels, so it was limited to 3,000 pixels and is still about 500x slower per image than the tree. The tree and MLP train on all 379,000 sampled pixels in about 6 s and 55 s. The U-Net would need 6.1 GFLOPs per image (section 4c).
+
+**Selected method: the decision tree at 64 x 64 or 128 x 128, reported against the shape prior.** On accuracy the tree, MLP and prior are within the fold-to-fold spread of each other (sections 1, 1a). The tree is the most consistent across folds, trains about 9x faster than the MLP, predicts in about 2 ms per image, and its feature importances show what it relies on. The evidence also shows the limit of every method tested: none beats a fixed mean mask by more than the noise, and the models' gain over the baseline comes from position, not image content (sections 1b, 1d, 3b). The next step is therefore a method that uses image context, such as the U-Net (future work), judged against the prior.
 
 ## Points to interpret in the report
 
@@ -152,5 +180,5 @@ FLOPs count only the convolution layers (2 x multiply-accumulates; batch norm, R
 - Working resolution barely changes accuracy (Dice 0.36 to 0.37 across 64 to 256), so 64 x 64 is the cheapest adequate choice. Bilinear upsampling of the prediction loses little.
 - Depth adds almost nothing to the learned models. Possible reasons: the depth band already isolates the target row, position features capture the same "tree is in the centre" prior, or the 8-bit depth is too coarse.
 - Check `res/tree_feature_importance.csv`: on a small test, row/column position dominated. That means the models partly learn where trunks usually are, which is a limitation (would not transfer to differently framed images).
-- SVR is limited by its training-set size (cost grows roughly with n^2) and is about 400x slower per image than the tree.
+- SVR is limited by its training-set size (cost grows roughly with n^2) and is about 500x slower per image than the tree.
 - In the baseline, skeletonisation is the bottleneck (57% of time).

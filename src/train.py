@@ -14,7 +14,7 @@ Usage:
     python src/train.py --no-depth          # RGB only: does depth help?
     python src/train.py --no-position       # without row/column features
 
-Outputs (tag is "", "_rgb" and/or "_nopos"):
+Outputs (tag is "", or "_ws<size>" when --work-size differs from the config, then "_rgb" and/or "_nopos"):
     outputs/<model><tag>.joblib            trained models, not committed
     res/ml_results<tag>.csv                test-set metrics and timings, including occ_recall
                                            (recall on GT pixels the visible-wood detector misses)
@@ -225,7 +225,9 @@ def main(argv=None):
     out_dir, res_dir = Path(args.out), Path(args.res)
     out_dir.mkdir(exist_ok=True)
     res_dir.mkdir(exist_ok=True)
-    tag = ("_rgb" if args.no_depth else "") + ("_nopos" if args.no_position else "")
+    # Sensitivity runs get their own file names so they never overwrite the main results.
+    tag = (f"_ws{work}" if work != mcfg.get("work_size", 128) else "") + ("_rgb" if args.no_depth else "") \
+        + ("_nopos" if args.no_position else "")
     results, val_rows, test_masks = {}, [], {}
 
     # Baseline on the same test trees, for a like-for-like comparison.
