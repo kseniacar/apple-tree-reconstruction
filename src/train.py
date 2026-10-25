@@ -16,7 +16,10 @@ Usage:
 
 Outputs (tag is "", "_rgb" and/or "_nopos"):
     outputs/<model><tag>.joblib            trained models, not committed
-    res/ml_results<tag>.csv                test-set metrics and timings
+    res/ml_results<tag>.csv                test-set metrics and timings, including occ_recall
+                                           (recall on GT pixels the visible-wood detector misses)
+    res/gt_offsets<tag>.csv                estimated GT shift per test image (alignment check)
+    res/ml_results_aligned<tag>.csv        test-set metrics against the shifted (aligned) GT
     res/ml_validation<tag>.csv             chosen thresholds and validation Dice
     res/tree_feature_importance<tag>.csv   decision-tree feature importance
     res/ml_examples<tag>.png               RGB / ground truth / predictions on test images
@@ -43,7 +46,8 @@ from sklearn.tree import DecisionTreeRegressor  # noqa: E402
 from baseline import mask_to_skeleton, predict_mask  # noqa: E402
 from dataset import find_pairs, load_sample, split_by_tree  # noqa: E402
 from features import downsample, feature_names, pixel_features, sample_pixels, upsample_map  # noqa: E402
-from metrics import chamfer_distance, dice, iou, precision_recall  # noqa: E402
+from alignment import estimate_offset, shift_mask  # noqa: E402
+from metrics import chamfer_distance, dice, iou, occluded_recall, precision_recall  # noqa: E402
 from utils import load_config, read_depth, read_image, read_mask  # noqa: E402
 
 ALL_MODELS = ["linear", "tree", "svr", "mlp"]
@@ -119,24 +123,30 @@ def predict_prob(model, img, work_size, out_size=256):
     return np.clip(upsample_map(small, out_size), 0, 1)
 
 
-def score(pred, gt):
+def score(pred, gt, visible=None):
     """Metrics for one predicted mask against ground truth.
 
     Args:
         pred: (256, 256) boolean predicted mask.
         gt: (256, 256) boolean ground-truth mask.
+        visible: Optional (256, 256) boolean mask of visible wood; if given,
+            the recall on hidden GT pixels is added as "occ_recall".
 
     Returns:
-        dict with keys "iou", "dice", "precision", "recall", "chamfer_px".
+        dict with keys "iou", "dice", "precision", "recall", "chamfer_px"
+        and, if ``visible`` is given, "occ_recall".
     """
     p, r = precision_recall(pred, gt)
-    return {"iou": iou(pred, gt), "dice": dice(pred, gt), "precision": p, "recall": r,
-            "chamfer_px": chamfer_distance(mask_to_skeleton(pred), mask_to_skeleton(gt))}
+    out = {"iou": iou(pred, gt), "dice": dice(pred, gt), "precision": p, "recall": r,
+           "chamfer_px": chamfer_distance(mask_to_skeleton(pred), mask_to_skeleton(gt))}
+    if visible is not None:
+        out["occ_recall"] = occluded_recall(pred, gt, visible)
+    return out
 
 
 def mean_scores(rows):
-    """Average each metric over a list of ``score`` dicts."""
-    return {k: float(np.mean([r[k] for r in rows])) for k in rows[0]}
+    """Average each metric over a list of ``score`` dicts, ignoring NaNs."""
+    return {k: float(np.nanmean([r[k] for r in rows])) for k in rows[0]}
 
 
 def best_threshold(probs, gts, candidates=np.linspace(0.1, 0.9, 17)):
@@ -216,7 +226,8 @@ def main(argv=None):
         depth = read_depth(d_p) if d_p is not None and not args.no_depth else None
         m = predict_mask(read_image(rgb_p), depth, **cfg["baseline"])
         base_masks.append(m)
-        base_rows.append(score(m, read_mask(gt_p)))
+        # The baseline mask doubles as the visible-wood detector, so its own occ_recall is 0 by construction.
+        base_rows.append(score(m, read_mask(gt_p), visible=m))
     results["baseline"] = mean_scores(base_rows)
     results["baseline"].update(fit_s=0.0, sec_per_image=(time.perf_counter() - t0) / len(base_rows))
     test_masks["baseline"] = base_masks
@@ -226,7 +237,7 @@ def main(argv=None):
     thr, val_dice = best_threshold([mean_mask] * len(data["val"]), [img["y"] for img in data["val"]])
     val_rows.append({"model": "prior", "threshold": thr, "val_dice": val_dice})
     prior = mean_mask > thr
-    results["prior"] = mean_scores([score(prior, img["y"]) for img in data["test"]])
+    results["prior"] = mean_scores([score(prior, img["y"], v) for img, v in zip(data["test"], base_masks)])
     results["prior"].update(fit_s=0.0, sec_per_image=0.0)
     test_masks["prior"] = [prior] * len(data["test"])
 
@@ -250,7 +261,7 @@ def main(argv=None):
         t0 = time.perf_counter()
         masks = [predict_prob(model, img, work) > thr for img in data["test"]]
         pred_s = (time.perf_counter() - t0) / len(masks)
-        results[name] = mean_scores([score(m, img["y"]) for m, img in zip(masks, data["test"])])
+        results[name] = mean_scores([score(m, img["y"], v) for m, img, v in zip(masks, data["test"], base_masks)])
         results[name].update(fit_s=fit_s, sec_per_image=pred_s)
         test_masks[name] = masks
         print(f"  fit {fit_s:.1f} s, threshold {thr:.2f} (val Dice {val_dice:.3f}), "
@@ -277,6 +288,29 @@ def main(argv=None):
         w = csv.DictWriter(f, fieldnames=["model", "threshold", "val_dice"])
         w.writeheader()
         w.writerows(val_rows)
+
+    # GT alignment check: estimate each test mask's shift against the visible wood (baseline mask)
+    # and re-score every method against the shifted GT. The reference is the baseline's own output,
+    # so the aligned scores favour the baseline; they bound the effect of the offset, not remove it.
+    max_shift = cfg.get("eval", {}).get("align_max_shift", 50)
+    offsets = [estimate_offset(img["y"], v, max_shift) for img, v in zip(data["test"], base_masks)]
+    with open(res_dir / f"gt_offsets{tag}.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["image", "dy", "dx", "overlap_px"])
+        for (rgb_p, _, _), off in zip(split["test"], offsets):
+            w.writerow([Path(rgb_p).name, *off])
+    dist = [float(np.hypot(dy, dx)) for dy, dx, _ in offsets]
+    print(f"\nGT offset vs visible wood: median {np.median(dist):.1f} px, max {np.max(dist):.1f} px "
+          f"(search limit {max_shift} px)")
+    aligned_gt = [shift_mask(img["y"], dy, dx) for img, (dy, dx, _) in zip(data["test"], offsets)]
+    with open(res_dir / f"ml_results_aligned{tag}.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        akeys = ["iou", "dice", "precision", "recall", "chamfer_px"]
+        w.writerow(["method"] + akeys)
+        for name, masks in test_masks.items():
+            r = mean_scores([score(m, g) for m, g in zip(masks, aligned_gt)])
+            w.writerow([name] + [f"{r[k]:.4f}" for k in akeys])
+            print(f"{name:>10} aligned Dice {r['dice']:.3f} (unaligned {results[name]['dice']:.3f})")
 
     cols = ["RGB", "ground truth"] + list(test_masks)
     n = min(3, len(data["test"]))
