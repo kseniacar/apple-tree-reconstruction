@@ -1,12 +1,25 @@
-"""Create an untrained scikit-learn regressor; inputs are standardised first.
-Args:
-    name: "linear", "tree", "svr" or "mlp".
-    cfg: the [ml] settings from config/default.toml.
-    seed: random seed for repeatable results.
-Returns:
-    A scikit-learn Pipeline (StandardScaler, then the model).
-Raises:
-    ValueError: if name is not one of the four models.
+"""Main method: per-pixel regression models compared with the baseline.
+
+Each pixel gets colour, depth, neighbourhood and position features
+(features.py). Linear regression, a decision tree, support vector regression
+and an MLP each predict how likely a pixel is to be branch. Images are split by
+tree; validation trees set each model's threshold and the held-out test trees
+are only used for the final comparison with the baseline and the shape prior
+(the mean training mask, which uses no image information).
+
+Usage:
+    python src/train.py --limit 40          # quick check
+    python src/train.py                     # all models, settings in config/default.toml [ml]
+    python src/train.py --work-size 64      # resolution sensitivity study
+    python src/train.py --no-depth          # RGB only: does depth help?
+    python src/train.py --no-position       # without row/column features
+
+Outputs (tag is "", "_rgb" and/or "_nopos"):
+    outputs/<model><tag>.joblib            trained models, not committed
+    res/ml_results<tag>.csv                test-set metrics and timings
+    res/ml_validation<tag>.csv             chosen thresholds and validation Dice
+    res/tree_feature_importance<tag>.csv   decision-tree feature importance
+    res/ml_examples<tag>.png               RGB / ground truth / predictions on test images
 """
 
 import argparse
@@ -31,13 +44,25 @@ from baseline import mask_to_skeleton, predict_mask  # noqa: E402
 from dataset import find_pairs, load_sample, split_by_tree  # noqa: E402
 from features import downsample, feature_names, pixel_features, sample_pixels, upsample_map  # noqa: E402
 from metrics import chamfer_distance, dice, iou, precision_recall  # noqa: E402
-from utils import load_config, read_image, read_mask  # noqa: E402
+from utils import load_config, read_depth, read_image, read_mask  # noqa: E402
 
 ALL_MODELS = ["linear", "tree", "svr", "mlp"]
 
 
 def build_model(name, cfg, seed):
-    """Create an untrained scikit-learn regressor (inputs are standardised first)."""
+    """Create an untrained scikit-learn regressor; inputs are standardised first.
+
+    Args:
+        name: "linear", "tree", "svr" or "mlp".
+        cfg: The ``[ml]`` settings from config/default.toml.
+        seed: Random seed for repeatable results.
+
+    Returns:
+        A scikit-learn Pipeline (StandardScaler, then the model).
+
+    Raises:
+        ValueError: If name is not one of the four models.
+    """
     if name == "linear":
         reg = LinearRegression()
     elif name == "tree":
@@ -54,7 +79,18 @@ def build_model(name, cfg, seed):
 
 
 def load_images(pairs, work_size, use_depth, use_position=True):
-    """Load samples as (features, mask at work size, mask at 256) per image."""
+    """Load samples and compute their pixel features.
+
+    Args:
+        pairs: List of ``(rgb_path, depth_path, gt_path)``.
+        work_size: Resolution the features are computed at.
+        use_depth: If False, the depth channel is set to zero.
+        use_position: Include the row/column features.
+
+    Returns:
+        list of dicts with keys "x" (input at 256), "feats" (pixel features at
+        work size), "y_small" (mask at work size) and "y" (mask at 256).
+    """
     out = []
     for i, p in enumerate(pairs, 1):
         x, y = load_sample(*p)
@@ -68,30 +104,67 @@ def load_images(pairs, work_size, use_depth, use_position=True):
 
 
 def predict_prob(model, img, work_size, out_size=256):
-    """Branch value map (out_size x out_size), clipped to [0, 1]."""
+    """Predict a branch value map for one image.
+
+    Args:
+        model: Fitted regressor from ``build_model``.
+        img: One dict from ``load_images``.
+        work_size: Resolution the features were computed at.
+        out_size: Output side length (the ground-truth size).
+
+    Returns:
+        (out_size, out_size) float array clipped to [0, 1].
+    """
     small = model.predict(img["feats"]).reshape(work_size, work_size)
     return np.clip(upsample_map(small, out_size), 0, 1)
 
 
 def score(pred, gt):
-    """Metrics for one predicted mask against ground truth."""
+    """Metrics for one predicted mask against ground truth.
+
+    Args:
+        pred: (256, 256) boolean predicted mask.
+        gt: (256, 256) boolean ground-truth mask.
+
+    Returns:
+        dict with keys "iou", "dice", "precision", "recall", "chamfer_px".
+    """
     p, r = precision_recall(pred, gt)
     return {"iou": iou(pred, gt), "dice": dice(pred, gt), "precision": p, "recall": r,
             "chamfer_px": chamfer_distance(mask_to_skeleton(pred), mask_to_skeleton(gt))}
 
 
 def mean_scores(rows):
+    """Average each metric over a list of ``score`` dicts."""
     return {k: float(np.mean([r[k] for r in rows])) for k in rows[0]}
 
 
 def best_threshold(probs, gts, candidates=np.linspace(0.1, 0.9, 17)):
-    """Threshold that maximises mean Dice on the validation images."""
+    """Threshold that maximises mean Dice on the validation images.
+
+    Args:
+        probs: List of (H, W) branch value maps.
+        gts: List of (H, W) boolean ground-truth masks, same order.
+        candidates: Thresholds to try.
+
+    Returns:
+        (threshold, mean validation Dice at that threshold).
+    """
     scores = [np.mean([dice(p > t, g) for p, g in zip(probs, gts)]) for t in candidates]
     i = int(np.argmax(scores))
     return float(candidates[i]), float(scores[i])
 
 
 def main(argv=None):
+    """Train the chosen models, compare them on the test trees and write results.
+
+    Args:
+        argv: Command-line arguments (None reads ``sys.argv``).
+
+    Returns:
+        0 on success, 1 if the data folder is missing or has fewer than 3
+        images with ground truth.
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", default="config/default.toml")
     parser.add_argument("--data-root", default=None)
@@ -140,10 +213,7 @@ def main(argv=None):
     t0 = time.perf_counter()
     base_rows, base_masks = [], []
     for rgb_p, d_p, gt_p in split["test"]:
-        depth = None
-        if d_p is not None and not args.no_depth:
-            depth = read_image(d_p)
-            depth = depth[..., 0] if depth.ndim == 3 else depth
+        depth = read_depth(d_p) if d_p is not None and not args.no_depth else None
         m = predict_mask(read_image(rgb_p), depth, **cfg["baseline"])
         base_masks.append(m)
         base_rows.append(score(m, read_mask(gt_p)))

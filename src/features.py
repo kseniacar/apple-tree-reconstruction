@@ -8,7 +8,15 @@ BASE_CHANNELS = ["r", "g", "b", "depth", "exg"]
 
 
 def feature_names(scales=(0, 2, 6), position=True):
-    """Names of the columns returned by ``pixel_features`` (same order)."""
+    """Names of the columns returned by ``pixel_features`` (same order).
+
+    Args:
+        scales: Gaussian sigmas, as passed to ``pixel_features``.
+        position: Whether the row/column features are included.
+
+    Returns:
+        list of str, e.g. ``"g_s6"`` = green smoothed with sigma 6.
+    """
     names = [f"{c}_s{s}" for s in scales for c in BASE_CHANNELS]
     return names + (["row", "col"] if position else [])
 
@@ -43,7 +51,16 @@ def pixel_features(x, scales=(0, 2, 6), position=True):
 
 
 def downsample(x, y, size):
-    """Resize a (C, H, W) input (bilinear) and (H, W) mask (nearest) to ``size``."""
+    """Resize an input (bilinear) and its mask (nearest neighbour) to ``size``.
+
+    Args:
+        x: (C, H, W) float array.
+        y: (H, W) boolean mask.
+        size: Target side length in pixels.
+
+    Returns:
+        (xs, ys): (C, size, size) float32 array and (size, size) boolean mask.
+    """
     if x.shape[-1] == size:
         return x, y
     xs = resize(x.transpose(1, 2, 0), (size, size), order=1, anti_aliasing=True).transpose(2, 0, 1)
@@ -56,6 +73,12 @@ def sample_pixels(feats, y, n_per_class, rng):
 
     Branch pixels are rare (a few percent of the image), so without balancing
     a model can score well by predicting "no branch" everywhere.
+
+    Args:
+        feats: (H * W, F) features from ``pixel_features``.
+        y: (H, W) boolean mask.
+        n_per_class: Pixels to draw from each class (fewer if not available).
+        rng: ``numpy.random.Generator``.
 
     Returns:
         (X, t): features and 0/1 targets of the chosen pixels.
@@ -71,7 +94,15 @@ def sample_pixels(feats, y, n_per_class, rng):
 
 
 def upsample_map(prob, size):
-    """Bilinear interpolation of a (h, w) probability map up to (size, size)."""
+    """Bilinear interpolation of a probability map up to (size, size).
+
+    Args:
+        prob: (h, w) float array.
+        size: Target side length in pixels.
+
+    Returns:
+        (size, size) float array.
+    """
     if prob.shape[0] == size:
         return prob
     return resize(prob, (size, size), order=1)

@@ -25,6 +25,12 @@ def centre_crop_square(img):
     """Crop the central square of an image (e.g. 640x480 -> 480x480).
 
     Assumed mask-to-image transform until the teaching team confirms it.
+
+    Args:
+        img: (H, W) or (H, W, C) array.
+
+    Returns:
+        (S, S) or (S, S, C) view, S = min(H, W).
     """
     h, w = img.shape[:2]
     s = min(h, w)
@@ -62,5 +68,12 @@ def predict_mask(rgb, depth=None, exg_threshold=0.05, depth_min=1, depth_max=255
 
 
 def mask_to_skeleton(mask):
-    """Reduce a binary mask to a one-pixel-wide skeleton."""
+    """Reduce a binary mask to a one-pixel-wide skeleton (Zhang's thinning).
+
+    Args:
+        mask: (H, W) boolean array.
+
+    Returns:
+        (H, W) boolean array, True on the centreline.
+    """
     return skeletonize(mask)

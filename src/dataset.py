@@ -6,7 +6,7 @@ import numpy as np
 from skimage.transform import resize
 
 from baseline import centre_crop_square
-from utils import read_image, read_mask
+from utils import read_depth, read_image, read_mask
 
 
 def find_pairs(data_root, season="Summer", exclude_rows=()):
@@ -36,12 +36,28 @@ def find_pairs(data_root, season="Summer", exclude_rows=()):
 
 
 def tree_id(path):
-    """Tree identifier from a file name, e.g. ``R01N01``."""
+    """Tree identifier from a file name.
+
+    Args:
+        path: File path such as ``.../R01N01_Summer_RGB-12-40-50.png``.
+
+    Returns:
+        str, the part before the first underscore, e.g. ``"R01N01"``.
+    """
     return Path(path).name.split("_")[0]
 
 
 def split_by_tree(pairs, val_frac=0.15, test_frac=0.15, seed=0):
     """Split samples into train / val / test so no tree appears in two sets.
+
+    Trees, not images, are shuffled and assigned, which stops a model being
+    tested on a tree it was trained on.
+
+    Args:
+        pairs: List of ``(rgb_path, depth_path, gt_path)`` from ``find_pairs``.
+        val_frac: Fraction of trees for validation (threshold choice).
+        test_frac: Fraction of trees held out for the final test.
+        seed: Random seed for the shuffle, so the split is repeatable.
 
     Returns:
         dict with keys "train", "val", "test", each a list of pairs.
@@ -62,19 +78,21 @@ def load_sample(rgb_path, depth_path, gt_path, size=256):
     """Load one sample as network input and target.
 
     The RGB-D image is centre-cropped to a square (same assumption as the
-    baseline) and resized to ``size``.
+    baseline) and resized to ``size``. A missing depth image gives an
+    all-zero depth channel (RGB only).
+
+    Args:
+        rgb_path: Path to the RGB PNG.
+        depth_path: Path to the depth PNG, or None.
+        gt_path: Path to the ``_GT`` mask PNG.
+        size: Side length of the output in pixels.
 
     Returns:
         x: (4, size, size) float32 in [0, 1], channels R, G, B, depth.
         y: (size, size) float32 mask, 1 = branch.
     """
     rgb = read_image(rgb_path)[..., :3]
-    if depth_path is None:
-        depth = np.zeros(rgb.shape[:2], np.uint8)
-    else:
-        depth = read_image(depth_path)
-        if depth.ndim == 3:
-            depth = depth[..., 0]  # greyscale stored as 3 identical channels
+    depth = np.zeros(rgb.shape[:2], np.uint8) if depth_path is None else read_depth(depth_path)
     x = centre_crop_square(np.dstack([rgb, depth]))
     x = resize(x, (size, size), order=1, preserve_range=True, anti_aliasing=True)
     y = read_mask(gt_path)

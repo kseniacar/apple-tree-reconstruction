@@ -12,12 +12,27 @@ from pathlib import Path
 import numpy as np
 
 from baseline import mask_to_skeleton, predict_mask
+from dataset import find_pairs
 from metrics import chamfer_distance, dice, iou, precision_recall
-from utils import find_samples, load_config, read_image, read_mask
+from utils import load_config, read_depth, read_image, read_mask
 
 
 def evaluate_pair(rgb, depth, gt, params):
-    """Run the baseline on one image and return a dict of metrics."""
+    """Run the baseline on one image and score it against the ground truth.
+
+    Args:
+        rgb: (H, W, 3) uint8 image.
+        depth: (H, W) uint8 depth image, or None for RGB only.
+        gt: (256, 256) boolean ground-truth mask.
+        params: keyword arguments for ``baseline.predict_mask`` (the
+            ``[baseline]`` section of the config).
+
+    Returns:
+        dict with keys "iou", "dice", "precision", "recall", "chamfer_px".
+
+    Raises:
+        ValueError: If the predicted mask and gt have different shapes.
+    """
     pred = predict_mask(rgb, depth, **params)
     p, r = precision_recall(pred, gt)
     return {
@@ -30,7 +45,15 @@ def evaluate_pair(rgb, depth, gt, params):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    """Evaluate the baseline on every image with ground truth and print mean metrics.
+
+    Args:
+        argv: Command-line arguments (None reads ``sys.argv``).
+
+    Returns:
+        0 on success, 1 if the data folder does not exist.
+    """
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", default="config/default.toml")
     parser.add_argument("--data-root", default=None)
     args = parser.parse_args(argv)
@@ -41,21 +64,13 @@ def main(argv=None):
         print(f"Data folder not found: {root}. See README 'Data'.", file=sys.stderr)
         return 1
 
-    files = find_samples(root, cfg["season"], cfg.get("exclude_rows", []))
-    # TODO: pair RGB / depth / GT files once naming is confirmed (doc/problem_statement.md §7).
-    print(f"Found {len(files)} {cfg['season']} images under {root}")
+    pairs = find_pairs(root, cfg["season"], cfg.get("exclude_rows", []))
+    print(f"Found {len(pairs)} {cfg['season']} images with ground truth under {root}")
     start = time.perf_counter()
     results = []
-    for f in files:
-        name = f.name
-        if "RGB" not in name or "GT" in name:
-            continue
-        gt_path = f.with_name(name.replace("RGB", "GT"))
-        depth_path = f.with_name(name.replace("RGB", "Depth"))
-        if not gt_path.exists():
-            continue
-        depth = read_image(depth_path) if depth_path.exists() else None
-        results.append(evaluate_pair(read_image(f), depth, read_mask(gt_path), cfg["baseline"]))
+    for rgb_p, depth_p, gt_p in pairs:
+        depth = read_depth(depth_p) if depth_p is not None else None
+        results.append(evaluate_pair(read_image(rgb_p), depth, read_mask(gt_p), cfg["baseline"]))
     elapsed = time.perf_counter() - start
 
     if results:

@@ -40,3 +40,21 @@ def test_main_missing_data_returns_error(tmp_path):
     cfg = tmp_path / "c.toml"
     cfg.write_text('data_root = "nope"\nseason = "Summer"\n[baseline]\n')
     assert main(["--config", str(cfg), "--data-root", str(tmp_path / "missing")]) == 1
+
+
+def test_main_runs_on_treeid_style_files(tmp_path, capsys, monkeypatch):
+    from PIL import Image
+    import main as main_module
+    stamp = "12-40-50"
+    rgb = np.zeros((480, 640, 3), np.uint8); rgb[...] = (30, 160, 30); rgb[:, 310:330] = (120, 80, 40)
+    gt = np.zeros((256, 256), np.uint8); gt[:, 123:134] = 255
+    Image.fromarray(rgb).save(tmp_path / f"R01N01_Summer_RGB-{stamp}.png")
+    Image.fromarray(np.full((480, 640, 3), 100, np.uint8)).save(tmp_path / f"R01N01_Summer_D-{stamp}.png")  # 3-channel depth
+    Image.fromarray(gt).save(tmp_path / f"R01N01_Summer_GT-{stamp}.png")
+    cfg = tmp_path / "c.toml"
+    cfg.write_text('data_root = "x"\nseason = "Summer"\n[baseline]\nclosing_radius = 0\n')
+    seen = []
+    monkeypatch.setattr(main_module, "evaluate_pair", lambda rgb, depth, gt, params: seen.append(depth) or evaluate_pair(rgb, depth, gt, params))
+    assert main(["--config", str(cfg), "--data-root", str(tmp_path)]) == 0
+    assert "Evaluated 1 images" in capsys.readouterr().out
+    assert seen[0] is not None and seen[0].shape == (480, 640)   # depth file found and reduced to one channel
