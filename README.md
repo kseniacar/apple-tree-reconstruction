@@ -66,7 +66,9 @@ Each `train.py` run also reports:
 ## Model selection and cost
 
 ```bash
-python src/crossval.py                  # 5-fold cross-validation by tree on the non-test trees
+python src/crossval.py                  # 5-fold cross-validation by tree on the non-test trees (prior + all models)
+python tools/baseline_sensitivity.py    # baseline threshold sweep on the validation trees
+python tools/gt_offset.py               # manual GT offset sheets, checked against the automatic estimate
 python tools/profile_baseline.py        # where the baseline spends its time (cProfile)
 python tools/profile_memory.py          # peak memory per image and feature-matrix sizes (no dataset needed)
 python tools/unet_cost.py               # U-Net parameters, FLOPs and arithmetic intensity (needs PyTorch, no dataset)
