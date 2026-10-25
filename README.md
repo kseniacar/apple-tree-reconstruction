@@ -38,7 +38,7 @@ In Colab:
 
 ```python
 !git clone https://github.com/kseniacar/apple-tree-reconstruction.git
-%cd <repo>
+%cd apple-tree-reconstruction
 !pip install -r requirements.txt
 from google.colab import drive; drive.mount('/content/drive')
 !python src/main.py --data-root /content/drive/MyDrive/TreeID
