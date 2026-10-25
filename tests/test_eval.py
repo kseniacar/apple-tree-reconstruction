@@ -84,10 +84,10 @@ def test_train_and_crossval_run_end_to_end(tmp_path):
         rows = {r["method"]: r for r in csv.DictReader(f)}
     assert "occ_recall" in rows["tree"] and float(rows["baseline"]["occ_recall"]) == 0.0
     assert (res / "gt_offsets.csv").exists() and (res / "ml_results_aligned.csv").exists()
-    assert cv_main(common + ["--models", "tree", "linear"]) == 0
+    assert cv_main(common + ["--models", "prior", "tree", "linear"]) == 0
     with open(res / "cv_summary.csv") as f:
         summary = list(csv.DictReader(f))
-    assert [r["model"] for r in summary] == ["tree", "linear"] and all(r["folds"] == "3" for r in summary)
+    assert [r["model"] for r in summary] == ["prior", "tree", "linear"] and all(r["folds"] == "3" for r in summary)
 
 
 def test_unet_flops_match_hand_count():

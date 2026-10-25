@@ -9,11 +9,13 @@ stays independent of model selection.
 
 In each fold the model is trained on the other k-1 folds and its threshold is
 chosen on the held-out fold, so the fold Dice is slightly optimistic; it is
-meant for ranking the models, not as the final accuracy.
+meant for ranking the models, not as the final accuracy. The shape prior (the
+mean training mask, no image input) is cross-validated the same way, as the
+reference any model has to beat.
 
 Usage:
     python src/crossval.py                       # all models, k from config/default.toml [eval]
-    python src/crossval.py --models tree mlp -k 5
+    python src/crossval.py --models prior tree mlp -k 5
     python src/crossval.py --limit 60            # quick check
 
 Outputs:
@@ -73,7 +75,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", default="config/default.toml")
     parser.add_argument("--data-root", default=None)
-    parser.add_argument("--models", nargs="+", default=ALL_MODELS, choices=ALL_MODELS)
+    parser.add_argument("--models", nargs="+", default=["prior"] + ALL_MODELS, choices=["prior"] + ALL_MODELS)
     parser.add_argument("-k", type=int, default=None, help="number of folds")
     parser.add_argument("--limit", type=int, default=None, help="use only the first N images (quick test)")
     parser.add_argument("--res", default="res", help="folder for results")
@@ -110,6 +112,12 @@ def main(argv=None):
         X = np.concatenate([q[0] for q in parts])
         t = np.concatenate([q[1] for q in parts])
         for name in args.models:
+            if name == "prior":  # same rule as train.py: mean training mask, threshold chosen like the models
+                mean_mask = np.mean([data[p]["y"] for p in train], axis=0)
+                thr, val_dice = best_threshold([mean_mask] * len(val), [data[p]["y"] for p in val])
+                rows.append({"model": name, "fold": i, "threshold": thr, "val_dice": val_dice})
+                print(f"  fold {i + 1}/{k} {name:>6}: Dice {val_dice:.3f} at threshold {thr:.2f}", flush=True)
+                continue
             Xf, tf = X, t
             if name == "svr":  # same subset rule as train.py
                 keep = rng.choice(len(X), min(mcfg.get("svr_samples", 3000), len(X)), replace=False)
