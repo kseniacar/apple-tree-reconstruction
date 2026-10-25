@@ -11,4 +11,4 @@ else
     echo "warning: PyTorch not installed, skipping src/unet.py and src/train_unet.py" >&2
 fi
 rm -rf doc/api
-PYTHONPATH=src python -m pdoc "${modules[@]}" -o doc/api
+PYTHONPATH=src python -m pdoc --docformat google "${modules[@]}" -o doc/api

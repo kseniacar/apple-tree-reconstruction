@@ -5,6 +5,15 @@ from torch import nn
 
 
 def _conv_block(c_in, c_out):
+    """Two 3x3 convolutions, each followed by batch norm and ReLU.
+
+    Args:
+        c_in: Input channels.
+        c_out: Output channels.
+
+    Returns:
+        ``nn.Sequential`` block; the spatial size is unchanged (padding 1).
+    """
     return nn.Sequential(
         nn.Conv2d(c_in, c_out, 3, padding=1, bias=False), nn.BatchNorm2d(c_out), nn.ReLU(inplace=True),
         nn.Conv2d(c_out, c_out, 3, padding=1, bias=False), nn.BatchNorm2d(c_out), nn.ReLU(inplace=True),
@@ -21,6 +30,7 @@ class UNet(nn.Module):
     """
 
     def __init__(self, in_channels=4, base=16, levels=4):
+        """Build the encoder, decoder and 1x1 output layer (arguments as for the class)."""
         super().__init__()
         chs = [base * 2 ** i for i in range(levels + 1)]
         self.down = nn.ModuleList([_conv_block(in_channels, chs[0])] +
@@ -31,6 +41,14 @@ class UNet(nn.Module):
         self.head = nn.Conv2d(chs[0], 1, 1)
 
     def forward(self, x):
+        """Run the network.
+
+        Args:
+            x: (B, in_channels, H, W) tensor, H and W divisible by 2**levels.
+
+        Returns:
+            (B, 1, H, W) tensor of logits (apply a sigmoid for probabilities).
+        """
         skips = []
         for i, block in enumerate(self.down):
             x = block(x if i == 0 else self.pool(x))
@@ -42,7 +60,14 @@ class UNet(nn.Module):
 
 
 def count_parameters(model):
-    """Number of trainable parameters."""
+    """Number of trainable parameters.
+
+    Args:
+        model: A ``torch.nn.Module``.
+
+    Returns:
+        int.
+    """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
@@ -66,6 +91,7 @@ def count_flops(model, input_shape):
     totals = {"macs": 0, "acts": 0}
 
     def hook(layer, inputs, output):
+        """Add one convolution layer's MACs and output size to the totals."""
         k = layer.kernel_size[0] * layer.kernel_size[1] * layer.in_channels // layer.groups
         if isinstance(layer, nn.ConvTranspose2d):
             # every input value is multiplied by every output channel's kernel

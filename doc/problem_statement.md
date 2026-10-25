@@ -2,6 +2,8 @@
 
 *Draft for Ksenia, MMA3001 2026-S2 individual project. Section numbers refer to the Project Brief PDF.*
 
+> **Status (2026-10-25).** This is the original proposal. What was implemented differs in places: the final method is per-pixel regression (`src/train.py`), compared with the baseline and a shape prior; the U-Net is future work (not trained); the dataset has no autumn images; and the output is the 2D branch mask and its skeleton, not a 3D skeleton. Section 2b below gives the inputs and outputs as implemented, and `doc/report/results_summary.md` gives the results and limitations.
+
 ## 1. Engineering problem (Brief, Project Requirements §1)
 
 ### 1.1 Engineering context
@@ -92,13 +94,39 @@ The intended user is an engineer choosing or tuning a perception method for a ha
 | | Item | Format | Notes |
 |---|---|---|---|
 | **Input** | RGB images, summer / autumn / winter | PNG, 640 × 480, 8-bit, 3 channels | Summer = main test case; autumn = partial leaf cover; winter = leaf-free reference |
-| **Input** | Depth images, same three seasons | PNG, 640 × 480, 8-bit, 1 channel | Relative depth only; units and scaling unknown, 0 assumed to mean "no reading" |
+| **Input** | Depth images, same three seasons | PNG, 640 × 480, 8-bit (stored as 3 identical channels in TreeID) | Relative depth only; units and scaling unknown, 0 assumed to mean "no reading" |
 | Output (intermediate) | Branch mask | Binary array, 256 × 256 (same grid as GT) | 1 = trunk or branch, including occluded |
 | Output (intermediate) | 2D centreline | One-pixel-wide skeleton in image coordinates | From skeletonising the mask, before lifting to 3D |
 | **Output (main)** | 3D skeleton | Graph: nodes (u, v, d) at base, junctions and tips; edges as 3D point chains | Relative depth unless calibration is provided |
 | **Ground truth** | `_GT` masks | PNG, 256 × 256, binary | Only for evaluation and training, never as model input |
 
 **Invalid inputs.** Missing depth file → RGB-only mode with a warning. Depth image that is a duplicate of another tree (Row 4 issue) → flagged by a hash check and excluded. Size mismatch → rejected with a clear error message.
+
+## 2b. Inputs and outputs as implemented
+
+| | Item | Format and domain | Units / meaning | Used by | Intended use |
+|---|---|---|---|---|---|
+| **Input** | Summer RGB image `<tree>_Summer_RGB-<time>.png` | PNG, 640 × 480 × 3, uint8, 0-255 | Colour; channels R, G, B | all methods | Leaf / bark appearance |
+| **Input** | Summer depth image `<tree>_Summer_D-<time>.png` | PNG, 640 × 480, uint8, 0-255 (3 identical channels; the first is used, `utils.read_depth`) | Relative depth, unknown scale; 0 = no reading | all methods; `--no-depth` sets it to zero | Separates the target row from the background |
+| **Ground truth** | `<tree>_Summer_GT-<time>.png` | PNG, 256 × 256, values 0 / 255 | True where value > 127 = trunk or branch, including hidden wood | training, threshold choice, scoring only | Never a model input |
+| **Settings** | `config/default.toml` | TOML | Data path, season, excluded rows (R04), baseline thresholds, model and evaluation settings | all scripts | One place to change parameters |
+| Internal | Model input `x` | (4, 256, 256) float32 in [0, 1] | 480 × 480 centre crop of RGB-D, resized (`dataset.load_sample`) | `train.py`, `train_unet.py` | Same grid as the GT |
+| **Output** | Branch mask | (256, 256) bool | True = predicted trunk or branch | `baseline.predict_mask`, `train.predict_prob` > threshold | Obstacle map for a planner |
+| **Output** | Skeleton | (256, 256) bool, one pixel wide | Branch centrelines in mask pixels | `baseline.mask_to_skeleton` | Chamfer distance; future 3D lifting |
+| **Output** | Metrics | float | IoU, Dice, precision, recall, occluded recall in [0, 1]; Chamfer distance in pixels at 256 × 256 | `metrics.py` | Comparing methods |
+| **Output** | `python src/main.py` | Printed means and run time | Baseline only, all summer images | | Quick check of the baseline |
+| **Output** | `python src/train.py` | `res/ml_results*.csv`, `res/ml_validation*.csv`, `res/gt_offsets*.csv`, `res/ml_results_aligned*.csv`, `res/tree_feature_importance*.csv`, `res/ml_examples*.png`, models in `outputs/` | Test-set metrics and timings, thresholds, offsets, figures | | Sections 1-3 of the results summary |
+| **Output** | `python src/crossval.py` | `res/cv_folds.csv`, `res/cv_summary.csv` | Validation Dice per fold, mean and standard deviation | | Model selection |
+
+**Invalid, missing or unsupported inputs, as implemented.**
+- **Missing data folder:** message to stderr, exit code 1.
+- **Image without a GT mask:** skipped.
+- **Missing depth file:** warning; that image runs RGB-only.
+- **Depth file byte-identical to another image's:** the image is dropped with a warning (MD5 check, `dataset.duplicate_depths`). None of the summer files are duplicated. The 6 duplicated winter hashes are all in row R04, which is also excluded by name.
+- **Depth size different from RGB:** `ValueError`.
+- **Prediction and GT of different sizes:** `ValueError` from `metrics.confusion`.
+- **A GT mask not 256 × 256:** resized to 256 × 256 by nearest neighbour in `dataset.load_sample`.
+- **Images framed differently from TreeID:** accepted, but the learned models depend on the tree being centred (results summary, section 1d).
 
 ## 3. Computational solution options (Brief §3)
 

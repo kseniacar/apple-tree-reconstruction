@@ -59,7 +59,7 @@ def _synthetic_dataset(folder, n_trees=10):
     for i in range(n_trees):
         col = 300 + int(rng.integers(-20, 20))
         rgb = np.zeros((480, 640, 3), np.uint8); rgb[...] = (30, 160, 30); rgb[:, col:col + 20] = (120, 80, 40)
-        depth = np.full((480, 640), 100, np.uint8)
+        depth = np.full((480, 640), 100 + i, np.uint8)   # distinct per tree, or the duplicate-depth check drops them
         gt = np.zeros((256, 256), np.uint8)
         c = (col - 80) * 256 // 480
         gt[:, c:c + 11] = 255
@@ -124,3 +124,16 @@ def test_baseline_sensitivity_evaluate_scores_known_case():
     gt = np.zeros((256, 256), bool); gt[:, 123:134] = True
     r = evaluate([(rgb, None, gt)], dict(exg_threshold=0.05, depth_min=1, depth_max=255, closing_radius=0))
     assert r["recall"] > 0.9 and r["precision"] > 0.9 and r["dice"] > 0.9
+
+
+def test_train_work_size_run_does_not_overwrite_main_results(tmp_path):
+    from train import main as train_main
+    data, res = tmp_path / "data", tmp_path / "res"
+    data.mkdir()
+    _synthetic_dataset(data)
+    cfg = tmp_path / "c.toml"
+    cfg.write_text('data_root = "x"\nseason = "Summer"\n[baseline]\n[ml]\nwork_size = 32\npixels_per_class = 50\n')
+    common = ["--config", str(cfg), "--data-root", str(data), "--res", str(res), "--out", str(tmp_path / "o"),
+              "--models", "linear"]
+    assert train_main(common + ["--work-size", "16"]) == 0
+    assert (res / "ml_results_ws16.csv").exists() and not (res / "ml_results.csv").exists()

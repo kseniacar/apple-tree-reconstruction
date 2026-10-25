@@ -186,19 +186,28 @@ can be reported both with and without an alignment correction.</p>
 <p>The cross-correlation of the two masks is computed with FFTs and its peak is
 searched within <code>max_shift</code> pixels of zero shift.</p>
 
-<p>Args:
-    gt: Boolean (H, W) ground-truth mask.
-    reference: Boolean (H, W) mask of visible wood in the image, for
-        example <code><a href="baseline.html#predict_mask">baseline.predict_mask</a></code> output.
-    max_shift: Largest shift in pixels to consider in each direction.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    Tuple <code>(dy, dx, overlap)</code>: <code>shift_mask(gt, dy, dx)</code> overlaps
-    <code>reference</code> best, with <code>overlap</code> pixels in common. <code>(0, 0, 0)</code>
-    if either mask is empty.</p>
+<ul>
+<li><strong>gt:</strong>  Boolean (H, W) ground-truth mask.</li>
+<li><strong>reference:</strong>  Boolean (H, W) mask of visible wood in the image, for
+example <code><a href="baseline.html#predict_mask">baseline.predict_mask</a></code> output.</li>
+<li><strong>max_shift:</strong>  Largest shift in pixels to consider in each direction.</li>
+</ul>
 
-<p>Raises:
-    ValueError: If the masks have different shapes.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Tuple <code>(dy, dx, overlap)</code>: <code>shift_mask(gt, dy, dx)</code> overlaps
+  <code>reference</code> best, with <code>overlap</code> pixels in common. <code>(0, 0, 0)</code>
+  if either mask is empty.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If the masks have different shapes.</li>
+</ul>
 </div>
 
 
@@ -235,13 +244,19 @@ searched within <code>max_shift</code> pixels of zero shift.</p>
 
             <div class="docstring"><p>Shift a mask by whole pixels, filling uncovered pixels with False.</p>
 
-<p>Args:
-    mask: Boolean (H, W) mask.
-    dy: Rows to move down (negative moves up).
-    dx: Columns to move right (negative moves left).</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    Boolean (H, W) shifted mask.</p>
+<ul>
+<li><strong>mask:</strong>  Boolean (H, W) mask.</li>
+<li><strong>dy:</strong>  Rows to move down (negative moves up).</li>
+<li><strong>dx:</strong>  Columns to move right (negative moves left).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Boolean (H, W) shifted mask.</p>
+</blockquote>
 </div>
 
 

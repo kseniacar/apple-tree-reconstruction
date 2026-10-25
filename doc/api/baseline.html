@@ -125,27 +125,32 @@ baseline    </h1>
 </span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a>
 </span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a><span class="sd">    Returns:</span>
 </span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a><span class="sd">        (out_size, out_size) boolean mask.</span>
-</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a><span class="sd">    """</span>
-</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">excess_green</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">exg_threshold</span>
-</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a>    <span class="k">if</span> <span class="n">depth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a>        <span class="n">mask</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">&gt;=</span> <span class="n">depth_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">depth</span> <span class="o">&lt;=</span> <span class="n">depth_max</span><span class="p">)</span>
-</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">centre_crop_square</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">resize</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="p">(</span><span class="n">out_size</span><span class="p">,</span> <span class="n">out_size</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>    <span class="k">if</span> <span class="n">closing_radius</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>        <span class="n">mask</span> <span class="o">=</span> <span class="n">binary_closing</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">disk</span><span class="p">(</span><span class="n">closing_radius</span><span class="p">))</span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>    <span class="k">return</span> <span class="n">mask</span>
-</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>
-</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>
-</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a><span class="k">def</span><span class="w"> </span><span class="nf">mask_to_skeleton</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
-</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a><span class="w">    </span><span class="sd">"""Reduce a binary mask to a one-pixel-wide skeleton (Zhang's thinning).</span>
-</span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a>
-</span><span id="L-73"><a href="#L-73"><span class="linenos">73</span></a><span class="sd">    Args:</span>
-</span><span id="L-74"><a href="#L-74"><span class="linenos">74</span></a><span class="sd">        mask: (H, W) boolean array.</span>
-</span><span id="L-75"><a href="#L-75"><span class="linenos">75</span></a>
-</span><span id="L-76"><a href="#L-76"><span class="linenos">76</span></a><span class="sd">    Returns:</span>
-</span><span id="L-77"><a href="#L-77"><span class="linenos">77</span></a><span class="sd">        (H, W) boolean array, True on the centreline.</span>
-</span><span id="L-78"><a href="#L-78"><span class="linenos">78</span></a><span class="sd">    """</span>
-</span><span id="L-79"><a href="#L-79"><span class="linenos">79</span></a>    <span class="k">return</span> <span class="n">skeletonize</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a>
+</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a><span class="sd">    Raises:</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a><span class="sd">        ValueError: If depth is given and is not the same size as rgb.</span>
+</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a><span class="sd">    """</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a>    <span class="k">if</span> <span class="n">depth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">depth</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">rgb</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]:</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"depth </span><span class="si">{</span><span class="n">depth</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> does not match RGB </span><span class="si">{</span><span class="n">rgb</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">excess_green</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">exg_threshold</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>    <span class="k">if</span> <span class="n">depth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>        <span class="n">mask</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">&gt;=</span> <span class="n">depth_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">depth</span> <span class="o">&lt;=</span> <span class="n">depth_max</span><span class="p">)</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">centre_crop_square</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">resize</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="p">(</span><span class="n">out_size</span><span class="p">,</span> <span class="n">out_size</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a>    <span class="k">if</span> <span class="n">closing_radius</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a>        <span class="n">mask</span> <span class="o">=</span> <span class="n">binary_closing</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">disk</span><span class="p">(</span><span class="n">closing_radius</span><span class="p">))</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a>    <span class="k">return</span> <span class="n">mask</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos">73</span></a>
+</span><span id="L-74"><a href="#L-74"><span class="linenos">74</span></a>
+</span><span id="L-75"><a href="#L-75"><span class="linenos">75</span></a><span class="k">def</span><span class="w"> </span><span class="nf">mask_to_skeleton</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos">76</span></a><span class="w">    </span><span class="sd">"""Reduce a binary mask to a one-pixel-wide skeleton (Zhang's thinning).</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos">77</span></a>
+</span><span id="L-78"><a href="#L-78"><span class="linenos">78</span></a><span class="sd">    Args:</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos">79</span></a><span class="sd">        mask: (H, W) boolean array.</span>
+</span><span id="L-80"><a href="#L-80"><span class="linenos">80</span></a>
+</span><span id="L-81"><a href="#L-81"><span class="linenos">81</span></a><span class="sd">    Returns:</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos">82</span></a><span class="sd">        (H, W) boolean array, True on the centreline.</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos">83</span></a><span class="sd">    """</span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos">84</span></a>    <span class="k">return</span> <span class="n">skeletonize</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -179,11 +184,17 @@ baseline    </h1>
 
             <div class="docstring"><p>Excess-green index 2g - r - b on chromaticity-normalised RGB.</p>
 
-<p>Args:
-    rgb: (H, W, 3) uint8 or float image.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (H, W) float array, higher = greener (leaf-like).</p>
+<ul>
+<li><strong>rgb:</strong>  (H, W, 3) uint8 or float image.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(H, W) float array, higher = greener (leaf-like).</p>
+</blockquote>
 </div>
 
 
@@ -221,11 +232,17 @@ baseline    </h1>
 
 <p>Assumed mask-to-image transform until the teaching team confirms it.</p>
 
-<p>Args:
-    img: (H, W) or (H, W, C) array.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (S, S) or (S, S, C) view, S = min(H, W).</p>
+<ul>
+<li><strong>img:</strong>  (H, W) or (H, W, C) array.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(S, S) or (S, S, C) view, S = min(H, W).</p>
+</blockquote>
 </div>
 
 
@@ -259,15 +276,20 @@ baseline    </h1>
 </span><span id="predict_mask-57"><a href="#predict_mask-57"><span class="linenos">57</span></a>
 </span><span id="predict_mask-58"><a href="#predict_mask-58"><span class="linenos">58</span></a><span class="sd">    Returns:</span>
 </span><span id="predict_mask-59"><a href="#predict_mask-59"><span class="linenos">59</span></a><span class="sd">        (out_size, out_size) boolean mask.</span>
-</span><span id="predict_mask-60"><a href="#predict_mask-60"><span class="linenos">60</span></a><span class="sd">    """</span>
-</span><span id="predict_mask-61"><a href="#predict_mask-61"><span class="linenos">61</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">excess_green</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">exg_threshold</span>
-</span><span id="predict_mask-62"><a href="#predict_mask-62"><span class="linenos">62</span></a>    <span class="k">if</span> <span class="n">depth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="predict_mask-63"><a href="#predict_mask-63"><span class="linenos">63</span></a>        <span class="n">mask</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">&gt;=</span> <span class="n">depth_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">depth</span> <span class="o">&lt;=</span> <span class="n">depth_max</span><span class="p">)</span>
-</span><span id="predict_mask-64"><a href="#predict_mask-64"><span class="linenos">64</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">centre_crop_square</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
-</span><span id="predict_mask-65"><a href="#predict_mask-65"><span class="linenos">65</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">resize</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="p">(</span><span class="n">out_size</span><span class="p">,</span> <span class="n">out_size</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
-</span><span id="predict_mask-66"><a href="#predict_mask-66"><span class="linenos">66</span></a>    <span class="k">if</span> <span class="n">closing_radius</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="predict_mask-67"><a href="#predict_mask-67"><span class="linenos">67</span></a>        <span class="n">mask</span> <span class="o">=</span> <span class="n">binary_closing</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">disk</span><span class="p">(</span><span class="n">closing_radius</span><span class="p">))</span>
-</span><span id="predict_mask-68"><a href="#predict_mask-68"><span class="linenos">68</span></a>    <span class="k">return</span> <span class="n">mask</span>
+</span><span id="predict_mask-60"><a href="#predict_mask-60"><span class="linenos">60</span></a>
+</span><span id="predict_mask-61"><a href="#predict_mask-61"><span class="linenos">61</span></a><span class="sd">    Raises:</span>
+</span><span id="predict_mask-62"><a href="#predict_mask-62"><span class="linenos">62</span></a><span class="sd">        ValueError: If depth is given and is not the same size as rgb.</span>
+</span><span id="predict_mask-63"><a href="#predict_mask-63"><span class="linenos">63</span></a><span class="sd">    """</span>
+</span><span id="predict_mask-64"><a href="#predict_mask-64"><span class="linenos">64</span></a>    <span class="k">if</span> <span class="n">depth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">depth</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">rgb</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]:</span>
+</span><span id="predict_mask-65"><a href="#predict_mask-65"><span class="linenos">65</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"depth </span><span class="si">{</span><span class="n">depth</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> does not match RGB </span><span class="si">{</span><span class="n">rgb</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="predict_mask-66"><a href="#predict_mask-66"><span class="linenos">66</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">excess_green</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">exg_threshold</span>
+</span><span id="predict_mask-67"><a href="#predict_mask-67"><span class="linenos">67</span></a>    <span class="k">if</span> <span class="n">depth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="predict_mask-68"><a href="#predict_mask-68"><span class="linenos">68</span></a>        <span class="n">mask</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">&gt;=</span> <span class="n">depth_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">depth</span> <span class="o">&lt;=</span> <span class="n">depth_max</span><span class="p">)</span>
+</span><span id="predict_mask-69"><a href="#predict_mask-69"><span class="linenos">69</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">centre_crop_square</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+</span><span id="predict_mask-70"><a href="#predict_mask-70"><span class="linenos">70</span></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">resize</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="p">(</span><span class="n">out_size</span><span class="p">,</span> <span class="n">out_size</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
+</span><span id="predict_mask-71"><a href="#predict_mask-71"><span class="linenos">71</span></a>    <span class="k">if</span> <span class="n">closing_radius</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="predict_mask-72"><a href="#predict_mask-72"><span class="linenos">72</span></a>        <span class="n">mask</span> <span class="o">=</span> <span class="n">binary_closing</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">disk</span><span class="p">(</span><span class="n">closing_radius</span><span class="p">))</span>
+</span><span id="predict_mask-73"><a href="#predict_mask-73"><span class="linenos">73</span></a>    <span class="k">return</span> <span class="n">mask</span>
 </span></pre></div>
 
 
@@ -277,16 +299,28 @@ baseline    </h1>
 then small gaps are closed. Occluded branches are NOT recovered; that is
 the limitation the learned methods are compared against.</p>
 
-<p>Args:
-    rgb: (H, W, 3) image.
-    depth: optional (H, W) 8-bit depth; 0 is treated as "no reading".
-    exg_threshold: excess-green above this is classed as leaf.
-    depth_min, depth_max: depth band kept as the target tree.
-    closing_radius: radius of the morphological closing disk.
-    out_size: side length of the output mask (GT masks are 256).</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (out_size, out_size) boolean mask.</p>
+<ul>
+<li><strong>rgb:</strong>  (H, W, 3) image.</li>
+<li><strong>depth:</strong>  optional (H, W) 8-bit depth; 0 is treated as "no reading".</li>
+<li><strong>exg_threshold:</strong>  excess-green above this is classed as leaf.</li>
+<li><strong>depth_min, depth_max:</strong>  depth band kept as the target tree.</li>
+<li><strong>closing_radius:</strong>  radius of the morphological closing disk.</li>
+<li><strong>out_size:</strong>  side length of the output mask (GT masks are 256).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(out_size, out_size) boolean mask.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  If depth is given and is not the same size as rgb.</li>
+</ul>
 </div>
 
 
@@ -302,26 +336,32 @@ the limitation the learned methods are compared against.</p>
 
     </div>
     <a class="headerlink" href="#mask_to_skeleton"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="mask_to_skeleton-71"><a href="#mask_to_skeleton-71"><span class="linenos">71</span></a><span class="k">def</span><span class="w"> </span><span class="nf">mask_to_skeleton</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
-</span><span id="mask_to_skeleton-72"><a href="#mask_to_skeleton-72"><span class="linenos">72</span></a><span class="w">    </span><span class="sd">"""Reduce a binary mask to a one-pixel-wide skeleton (Zhang's thinning).</span>
-</span><span id="mask_to_skeleton-73"><a href="#mask_to_skeleton-73"><span class="linenos">73</span></a>
-</span><span id="mask_to_skeleton-74"><a href="#mask_to_skeleton-74"><span class="linenos">74</span></a><span class="sd">    Args:</span>
-</span><span id="mask_to_skeleton-75"><a href="#mask_to_skeleton-75"><span class="linenos">75</span></a><span class="sd">        mask: (H, W) boolean array.</span>
-</span><span id="mask_to_skeleton-76"><a href="#mask_to_skeleton-76"><span class="linenos">76</span></a>
-</span><span id="mask_to_skeleton-77"><a href="#mask_to_skeleton-77"><span class="linenos">77</span></a><span class="sd">    Returns:</span>
-</span><span id="mask_to_skeleton-78"><a href="#mask_to_skeleton-78"><span class="linenos">78</span></a><span class="sd">        (H, W) boolean array, True on the centreline.</span>
-</span><span id="mask_to_skeleton-79"><a href="#mask_to_skeleton-79"><span class="linenos">79</span></a><span class="sd">    """</span>
-</span><span id="mask_to_skeleton-80"><a href="#mask_to_skeleton-80"><span class="linenos">80</span></a>    <span class="k">return</span> <span class="n">skeletonize</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="mask_to_skeleton-76"><a href="#mask_to_skeleton-76"><span class="linenos">76</span></a><span class="k">def</span><span class="w"> </span><span class="nf">mask_to_skeleton</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
+</span><span id="mask_to_skeleton-77"><a href="#mask_to_skeleton-77"><span class="linenos">77</span></a><span class="w">    </span><span class="sd">"""Reduce a binary mask to a one-pixel-wide skeleton (Zhang's thinning).</span>
+</span><span id="mask_to_skeleton-78"><a href="#mask_to_skeleton-78"><span class="linenos">78</span></a>
+</span><span id="mask_to_skeleton-79"><a href="#mask_to_skeleton-79"><span class="linenos">79</span></a><span class="sd">    Args:</span>
+</span><span id="mask_to_skeleton-80"><a href="#mask_to_skeleton-80"><span class="linenos">80</span></a><span class="sd">        mask: (H, W) boolean array.</span>
+</span><span id="mask_to_skeleton-81"><a href="#mask_to_skeleton-81"><span class="linenos">81</span></a>
+</span><span id="mask_to_skeleton-82"><a href="#mask_to_skeleton-82"><span class="linenos">82</span></a><span class="sd">    Returns:</span>
+</span><span id="mask_to_skeleton-83"><a href="#mask_to_skeleton-83"><span class="linenos">83</span></a><span class="sd">        (H, W) boolean array, True on the centreline.</span>
+</span><span id="mask_to_skeleton-84"><a href="#mask_to_skeleton-84"><span class="linenos">84</span></a><span class="sd">    """</span>
+</span><span id="mask_to_skeleton-85"><a href="#mask_to_skeleton-85"><span class="linenos">85</span></a>    <span class="k">return</span> <span class="n">skeletonize</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
 </span></pre></div>
 
 
             <div class="docstring"><p>Reduce a binary mask to a one-pixel-wide skeleton (Zhang's thinning).</p>
 
-<p>Args:
-    mask: (H, W) boolean array.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (H, W) boolean array, True on the centreline.</p>
+<ul>
+<li><strong>mask:</strong>  (H, W) boolean array.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(H, W) boolean array, True on the centreline.</p>
+</blockquote>
 </div>
 
 

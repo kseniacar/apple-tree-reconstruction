@@ -180,15 +180,24 @@ utils    </h1>
 
             <div class="docstring"><p>Load a TOML config file.</p>
 
-<p>Args:
-    path: Path to a <code>.toml</code> file.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    dict of settings.</p>
+<ul>
+<li><strong>path:</strong>  Path to a <code>.toml</code> file.</li>
+</ul>
 
-<p>Raises:
-    FileNotFoundError: If the file does not exist.
-    tomllib.TOMLDecodeError: If the file is not valid TOML.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>dict of settings.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>FileNotFoundError:</strong>  If the file does not exist.</li>
+<li><strong>tomllib.TOMLDecodeError:</strong>  If the file is not valid TOML.</li>
+</ul>
 </div>
 
 
@@ -222,14 +231,23 @@ utils    </h1>
 
             <div class="docstring"><p>Read an image file into a numpy array.</p>
 
-<p>Args:
-    path: Path to a PNG (or any format Pillow reads).</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    uint8 array, (H, W) for greyscale or (H, W, C) for colour.</p>
+<ul>
+<li><strong>path:</strong>  Path to a PNG (or any format Pillow reads).</li>
+</ul>
 
-<p>Raises:
-    FileNotFoundError: If the file does not exist.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>uint8 array, (H, W) for greyscale or (H, W, C) for colour.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>FileNotFoundError:</strong>  If the file does not exist.</li>
+</ul>
 </div>
 
 
@@ -270,14 +288,23 @@ utils    </h1>
 <p>Some TreeID depth PNGs store the grey value in three identical channels;
 only the first is kept.</p>
 
-<p>Args:
-    path: Path to the depth PNG.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (H, W) uint8 array; 0 means no depth reading.</p>
+<ul>
+<li><strong>path:</strong>  Path to the depth PNG.</li>
+</ul>
 
-<p>Raises:
-    FileNotFoundError: If the file does not exist.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(H, W) uint8 array; 0 means no depth reading.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>FileNotFoundError:</strong>  If the file does not exist.</li>
+</ul>
 </div>
 
 
@@ -314,14 +341,23 @@ only the first is kept.</p>
 
             <div class="docstring"><p>Read a ground-truth mask as a boolean array (white = branch).</p>
 
-<p>Args:
-    path: Path to a <code>_GT</code> mask PNG.</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    (H, W) boolean array, True where the pixel value is above 127.</p>
+<ul>
+<li><strong>path:</strong>  Path to a <code>_GT</code> mask PNG.</li>
+</ul>
 
-<p>Raises:
-    FileNotFoundError: If the file does not exist.</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>(H, W) boolean array, True where the pixel value is above 127.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>FileNotFoundError:</strong>  If the file does not exist.</li>
+</ul>
 </div>
 
 
